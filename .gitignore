@@ -1,0 +1,8 @@
+# 密钥与本地敏感文件，禁止入库
+api.txt
+*.pem
+*.key
+
+# 系统/编辑器
+Thumbs.db
+.DS_Store
