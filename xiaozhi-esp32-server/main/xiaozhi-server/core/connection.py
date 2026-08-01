@@ -29,6 +29,7 @@ from core.utils.modules_initialize import (
 )
 from core.handle.reportHandle import report, enqueue_tool_report
 from core.business_report import business_reporter
+from core.persona_pack import build_persona_prompt, load_persona_pack, normalize_emotion
 from core.providers.tts.default import DefaultTTS
 from concurrent.futures import ThreadPoolExecutor
 from core.utils.dialogue import Message, Dialogue
@@ -118,6 +119,13 @@ class ConnectionHandler:
         self.client_is_speaking = False
         self.client_listen_mode = "auto"
         self.client_aec = False  # 是否启用了服务端AEC
+        self.persona_pack = None
+        self.persona_pack_source = None
+        self.persona_pack_fingerprint = None
+        self.persona_refresh_future = None
+        self.peripheral_state = {
+            "emotion": "neutral", "gaze": "center", "closed": False, "extra": {}
+        }
 
         # 对话轮次令牌不能复用。client_abort 会在下一轮开始时被清除，不能单独
         # 用它判断旧的 LLM/MCP 后台任务是否仍然有效。
@@ -726,9 +734,91 @@ class ConnectionHandler:
             self._init_prompt_enhancement()
             """注入工具调用few-shot示例（仅function_call模式）"""
             self._inject_tool_call_fewshot()
+            self._refresh_persona_pack()
+            refresh_interval = int(self.config.get("persona_refresh_interval", 300))
+            if refresh_interval > 0:
+                self.persona_refresh_future = asyncio.run_coroutine_threadsafe(
+                    self._persona_refresh_loop(refresh_interval), self.loop
+                )
 
         except Exception as e:
             self.logger.bind(tag=TAG).error(f"实例化组件失败: {e}")
+
+    def _refresh_persona_pack(self):
+        """拉取业务人设；仅在内容变化时替换当前会话 Prompt。"""
+        pack, source = load_persona_pack(
+            self.config, self.device_id
+        )
+        prompt = build_persona_prompt(pack)
+        fingerprint = json.dumps(pack, ensure_ascii=False, sort_keys=True) if pack else prompt
+        if fingerprint == self.persona_pack_fingerprint:
+            return
+        self.persona_pack = pack
+        self.persona_pack_source = source
+        self.persona_pack_fingerprint = fingerprint
+        self.change_system_prompt(prompt)
+        version = (pack or {}).get("kb_version", "none")
+        self.logger.bind(tag=TAG).info(
+            f"persona_pack refreshed source={source} kb_version={version}"
+        )
+        if pack:
+            emotion = normalize_emotion(pack.get("default_emotion"))
+            asyncio.run_coroutine_threadsafe(
+                self._apply_default_emotion(emotion), self.loop
+            )
+
+    async def _persona_refresh_loop(self, refresh_interval):
+        """连接生命周期内定时刷新；HTTP 在默认线程池执行，不阻塞事件循环。"""
+        while not self.stop_event.is_set():
+            await asyncio.sleep(refresh_interval)
+            if self.stop_event.is_set():
+                return
+            await self.loop.run_in_executor(None, self._refresh_persona_pack)
+
+    async def _apply_default_emotion(self, emotion: str):
+        """等待设备 MCP 工具注册后设置会话默认表情，超时则静默降级。"""
+        for _ in range(30):
+            if self.func_handler and self.func_handler.has_tool("self_eye_set_emotion"):
+                try:
+                    result = await self.func_handler.tool_manager.execute_tool(
+                        "self_eye_set_emotion", {"emotion": emotion}
+                    )
+                    if result and result.action != Action.ERROR:
+                        self.update_peripheral_state_from_tool(
+                            "self_eye_set_emotion", {"emotion": emotion}
+                        )
+                except Exception as error:
+                    self.logger.bind(tag=TAG).warning(
+                        f"default emotion MCP failed: {error}"
+                    )
+                return
+            await asyncio.sleep(0.1)
+        self.logger.bind(tag=TAG).debug("default emotion skipped: device MCP unavailable")
+
+    def update_peripheral_state_from_tool(self, function_name, arguments):
+        """以成功的眼睛工具调用为准维护快照并异步旁路到业务后端。"""
+        if not self.device_id or not function_name.startswith("self_eye_"):
+            return
+        state = dict(self.peripheral_state)
+        state["extra"] = {"source": "mcp", "last_action": function_name}
+        if function_name == "self_eye_set_emotion":
+            state["emotion"] = normalize_emotion(arguments.get("emotion"))
+        elif function_name == "self_eye_look":
+            state["gaze"] = str(arguments.get("direction", "center"))
+        elif function_name == "self_eye_close":
+            state["closed"] = True
+        elif function_name == "self_eye_open":
+            state["closed"] = False
+        elif function_name != "self_eye_blink":
+            return
+        self.peripheral_state = state
+        business_reporter.peripheral_event(
+            self.device_id,
+            state["emotion"],
+            state["gaze"],
+            state["closed"],
+            state["extra"],
+        )
 
     def _init_prompt_enhancement(self):
 
@@ -1675,6 +1765,9 @@ class ConnectionHandler:
                 except asyncio.CancelledError:
                     pass
                 self._aec_cache_cleanup_task = None
+
+            if self.persona_refresh_future and not self.persona_refresh_future.done():
+                self.persona_refresh_future.cancel()
 
             # 清理AEC缓存
             if hasattr(self, "aec_audio_cache"):

@@ -186,6 +186,8 @@ class UnifiedToolHandler:
 
             # 执行工具调用
             result = await self.tool_manager.execute_tool(function_name, arguments)
+            if result and result.action != Action.ERROR:
+                conn.update_peripheral_state_from_tool(function_name, arguments)
             return result
 
         except Exception as e:

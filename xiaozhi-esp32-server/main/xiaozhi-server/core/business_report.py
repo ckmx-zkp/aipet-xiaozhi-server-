@@ -113,6 +113,26 @@ class BusinessReporter:
             }
         )
 
+    def peripheral_event(
+        self, device_uid: str, emotion: str, gaze: str, closed: bool, extra: dict
+    ) -> None:
+        if not self._enabled or not device_uid:
+            return
+        self._queue.put(
+            {
+                "kind": "peripheral_event",
+                "attempt": 0,
+                "url": f"{self._base_url}/api/internal/peripheral/events",
+                "payload": {
+                    "device_uid": device_uid,
+                    "emotion": emotion,
+                    "gaze": gaze,
+                    "closed": closed,
+                    "extra": extra,
+                },
+            }
+        )
+
     # ---- 工作线程 ----
 
     def _worker(self):
