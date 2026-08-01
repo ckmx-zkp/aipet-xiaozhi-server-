@@ -137,14 +137,19 @@ class UnifiedToolHandler:
         return self.tool_manager.has_tool(tool_name)
 
     async def handle_llm_function_call(
-        self, conn, function_call_data: Dict[str, Any]
+        self, conn, function_call_data: Dict[str, Any], turn_id=None
     ) -> Optional[ActionResponse]:
         """处理LLM函数调用"""
         try:
+            if turn_id is not None and not conn.is_turn_active(turn_id):
+                self.logger.info("Skipping stale tool call before execution")
+                return ActionResponse(action=Action.NONE)
             # 处理多函数调用
             if "function_calls" in function_call_data:
                 responses = []
                 for call in function_call_data["function_calls"]:
+                    if turn_id is not None and not conn.is_turn_active(turn_id):
+                        return ActionResponse(action=Action.NONE)
                     result = await self.tool_manager.execute_tool(
                         call["name"], call.get("arguments", {})
                     )
@@ -173,6 +178,11 @@ class UnifiedToolHandler:
                 await send_display_message(self.conn, f"% {function_name}")
             except Exception as e:
                 self.logger.warning(f"发送工具调用显示消息失败: {e}")
+
+            # 显示消息发送期间也可能收到打断，执行前必须再次确认。
+            if turn_id is not None and not conn.is_turn_active(turn_id):
+                self.logger.info("Skipping stale tool call after display message")
+                return ActionResponse(action=Action.NONE)
 
             # 执行工具调用
             result = await self.tool_manager.execute_tool(function_name, arguments)

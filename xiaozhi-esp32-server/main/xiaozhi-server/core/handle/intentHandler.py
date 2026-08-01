@@ -17,7 +17,7 @@ from core.providers.tts.dto.dto import TTSMessageDTO, SentenceType
 TAG = __name__
 
 
-async def handle_user_intent(conn: "ConnectionHandler", text):
+async def handle_user_intent(conn: "ConnectionHandler", text, turn_id=None):
     # 预处理输入文本，处理可能的JSON格式
     try:
         if text.strip().startswith("{") and text.strip().endswith("}"):
@@ -42,12 +42,14 @@ async def handle_user_intent(conn: "ConnectionHandler", text):
         return False
     # 使用LLM进行意图分析
     intent_result = await analyze_intent_with_llm(conn, text)
+    if turn_id is not None and not conn.is_turn_active(turn_id):
+        return True
     if not intent_result:
         return False
     # 会话开始时生成sentence_id
     conn.sentence_id = str(uuid.uuid4().hex)
     # 处理各种意图
-    return await process_intent_result(conn, intent_result, text)
+    return await process_intent_result(conn, intent_result, text, turn_id=turn_id)
 
 
 async def check_direct_exit(conn: "ConnectionHandler", text):
@@ -81,7 +83,7 @@ async def analyze_intent_with_llm(conn: "ConnectionHandler", text):
 
 
 async def process_intent_result(
-    conn: "ConnectionHandler", intent_result, original_text
+    conn: "ConnectionHandler", intent_result, original_text, turn_id=None
 ):
     """处理意图识别结果"""
     try:
@@ -164,6 +166,8 @@ async def process_intent_result(
 
             # 使用executor执行函数调用和结果处理
             def process_function_call():
+                if turn_id is not None and not conn.is_turn_active(turn_id):
+                    return
                 conn.dialogue.put(Message(role="user", content=original_text))
                 
                 # 工具调用超时时间
@@ -172,7 +176,7 @@ async def process_intent_result(
                 try:
                     result = asyncio.run_coroutine_threadsafe(
                         conn.func_handler.handle_llm_function_call(
-                            conn, function_call_data
+                            conn, function_call_data, turn_id=turn_id
                         ),
                         conn.loop,
                     ).result(timeout=tool_call_timeout)
@@ -183,6 +187,8 @@ async def process_intent_result(
                     )
 
                 # 上报工具调用结果
+                if turn_id is not None and not conn.is_turn_active(turn_id):
+                    return
                 if result:
                     enqueue_tool_report(conn, function_name, tool_input, str(result.result) if result.result else None, report_tool_call=False)
 

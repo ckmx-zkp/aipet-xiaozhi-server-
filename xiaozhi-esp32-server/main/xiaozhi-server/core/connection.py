@@ -119,6 +119,11 @@ class ConnectionHandler:
         self.client_listen_mode = "auto"
         self.client_aec = False  # 是否启用了服务端AEC
 
+        # 对话轮次令牌不能复用。client_abort 会在下一轮开始时被清除，不能单独
+        # 用它判断旧的 LLM/MCP 后台任务是否仍然有效。
+        self._turn_lock = threading.Lock()
+        self._active_turn_id = 0
+
         # 线程任务相关
         self.loop = None  # 在 handle_connection 中获取运行中的事件循环
         self.stop_event = threading.Event()
@@ -163,6 +168,7 @@ class ConnectionHandler:
         self.asr_audio = []  # 存储PCM帧列表，供VAD和ASR共享
         self.asr_audio_queue = queue.Queue()
         self.current_speaker = None  # 存储当前说话人
+
         self.introduced_speakers = set()  # 已"首次引入"的说话人，控制只在首轮带名字
         self.system_introduced_speakers = set()  # 已在 system 注入过身份的说话人，控制 system 身份只首轮出现
 
@@ -203,6 +209,24 @@ class ConnectionHandler:
         self.calling = False
         # 标记当前是否为来电接听模式
         self.incoming_call = None
+
+    def start_turn(self):
+        """开始一轮用户对话，并使此前轮次的异步结果失效。"""
+        with self._turn_lock:
+            self._active_turn_id += 1
+            turn_id = self._active_turn_id
+        self.client_abort = False
+        return turn_id
+
+    def cancel_active_turn(self):
+        """使当前轮次失效；已经在执行的网络请求会自然返回，但不得再输出或调用工具。"""
+        with self._turn_lock:
+            self._active_turn_id += 1
+            return self._active_turn_id
+
+    def is_turn_active(self, turn_id):
+        with self._turn_lock:
+            return turn_id == self._active_turn_id
 
     async def handle_connection(self, ws: websockets.ServerConnection):
         try:
@@ -1040,7 +1064,14 @@ class ConnectionHandler:
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
 
-    def chat(self, query, depth=0):
+    def chat(self, query, depth=0, turn_id=None):
+        # 兼容非语音入口（例如 chat_and_close）；语音入口会在提交任务前分配令牌。
+        if turn_id is None:
+            turn_id = self.start_turn()
+        if not self.is_turn_active(turn_id):
+            self.logger.bind(tag=TAG).debug("Skipping stale chat task before LLM request")
+            return False
+
         # 保存当前任务的sentence_id到局部变量，避免被新任务覆盖
         current_sentence_id = None
 
@@ -1142,7 +1173,7 @@ class ConnectionHandler:
         emotion_flag = True
         try:
             for response in llm_responses:
-                if self.client_abort:
+                if self.client_abort or not self.is_turn_active(turn_id):
                     break
                 if self.intent_type == "function_call" and functions is not None:
                     content, tools_call = response
@@ -1175,6 +1206,8 @@ class ConnectionHandler:
                                     new_part = self._clean_response_garbage(new_part)
                                     if new_part:
                                         tc["_da_sent"] = safe_end
+                                        if not self.is_turn_active(turn_id):
+                                            break
                                         self.tts.tts_text_queue.put(
                                             TTSMessageDTO(
                                                 sentence_id=current_sentence_id,
@@ -1187,6 +1220,8 @@ class ConnectionHandler:
                     content = response
 
                 # 在llm回复中获取情绪表情，一轮对话只在开头获取一次
+                if not self.is_turn_active(turn_id):
+                    break
                 if emotion_flag and content is not None and content.strip():
                     if (self.features or {}).get("emoji", True):
                         asyncio.run_coroutine_threadsafe(
@@ -1226,7 +1261,7 @@ class ConnectionHandler:
                 )
             return
         # 处理function call
-        if tool_call_flag:
+        if tool_call_flag and self.is_turn_active(turn_id):
             bHasError = False
             # 处理基于文本的工具调用格式
             if len(tool_calls_list) == 0 and content_arguments:
@@ -1315,6 +1350,8 @@ class ConnectionHandler:
                 # 收集所有工具调用的 Future
                 futures_with_data = []
                 for tool_call_data in tool_calls_list:
+                    if not self.is_turn_active(turn_id):
+                        break
                     self.logger.bind(tag=TAG).debug(
                         f"function_name={tool_call_data['name']}, function_id={tool_call_data['id']}, function_arguments={tool_call_data['arguments']}"
                     )
@@ -1325,7 +1362,7 @@ class ConnectionHandler:
 
                     future = asyncio.run_coroutine_threadsafe(
                         self.func_handler.handle_llm_function_call(
-                            self, tool_call_data
+                            self, tool_call_data, turn_id=turn_id
                         ),
                         self.loop,
                     )
@@ -1339,6 +1376,8 @@ class ConnectionHandler:
                 for future, tool_call_data, tool_input in futures_with_data:
                     try:
                         result = future.result(timeout=tool_call_timeout)
+                        if not self.is_turn_active(turn_id):
+                            continue
                         tool_results.append((result, tool_call_data))
                         # 使用公共方法上报工具调用结果
                         enqueue_tool_report(self, tool_call_data['name'], tool_input, str(result.result) if result.result else None, report_tool_call=False)
@@ -1357,9 +1396,15 @@ class ConnectionHandler:
 
                 # 统一处理工具调用结果
                 if tool_results:
-                    self._handle_function_result(tool_results, depth=depth, streamed_text=streamed_text)
+                    self._handle_function_result(
+                        tool_results, depth=depth, streamed_text=streamed_text, turn_id=turn_id
+                    )
 
         # 存储对话内容
+        if not self.is_turn_active(turn_id):
+            self.logger.bind(tag=TAG).debug("Discarded stale chat result")
+            return False
+
         if len(response_message) > 0:
             text_buff = "".join(response_message)
             self.tts.store_tts_text(current_sentence_id, text_buff)
@@ -1382,7 +1427,10 @@ class ConnectionHandler:
 
         return True
 
-    def _handle_function_result(self, tool_results, depth, streamed_text=""):
+    def _handle_function_result(self, tool_results, depth, streamed_text="", turn_id=None):
+        if turn_id is not None and not self.is_turn_active(turn_id):
+            self.logger.bind(tag=TAG).debug("Discarded stale tool result")
+            return
         need_llm_tools = []
         record_tools = []
 
@@ -1488,7 +1536,7 @@ class ConnectionHandler:
                         )
                     )
 
-            self.chat(None, depth=depth + 1)
+            self.chat(None, depth=depth + 1, turn_id=turn_id)
 
     def _report_worker(self):
         """聊天记录上报工作线程"""
