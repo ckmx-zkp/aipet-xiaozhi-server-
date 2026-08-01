@@ -33,10 +33,12 @@ def report_business_chat(conn: "ConnectionHandler", role: str, text: str):
             return
         if getattr(conn, "need_bind", False):
             return
+        if not conn.device_id:
+            return
         if not text:
             return
         business_reporter.chat_event(
-            conn.device_id, conn.business_session_no, role, text
+            conn.device_id, conn.session_id, role, text
         )
     except Exception as e:
         conn.logger.bind(tag=TAG).error(f"业务旁路入队失败: {e}")

@@ -9,7 +9,7 @@
 - 失败指数退避重试，有上限；最终失败仅记日志丢弃，不影响会话
 - 不含音频（R2：业务侧不存原始音频）
 - device_uid 直接使用设备 MAC（conn.device_id）
-- session_id 为业务会话号（int64，epoch 毫秒，连接建立时生成）
+- session_id 为小智连接原生 UUID 字符串，连接建立时生成
 - 开关与地址走本地 data/.config.yaml 的 business_api 段（智控台不下发）
 """
 
@@ -70,7 +70,20 @@ class BusinessReporter:
 
     # ---- 对外 API（均不阻塞调用方） ----
 
-    def chat_event(self, device_uid: str, session_no: int, role: str, content: str) -> None:
+    def device_seen(self, device_uid: str) -> None:
+        """首见建档/在线镜像；与后续事件共用单一队列以保持投递顺序。"""
+        if not self._enabled or not device_uid:
+            return
+        self._queue.put(
+            {
+                "kind": "device_seen",
+                "attempt": 0,
+                "url": f"{self._base_url}/api/internal/devices/seen",
+                "payload": {"device_uid": device_uid},
+            }
+        )
+
+    def chat_event(self, device_uid: str, session_id: str, role: str, content: str) -> None:
         if not self._enabled or not content:
             return
         self._queue.put(
@@ -80,7 +93,7 @@ class BusinessReporter:
                 "url": f"{self._base_url}/api/internal/chat/events",
                 "payload": {
                     "device_uid": device_uid,
-                    "session_id": session_no,
+                    "session_id": session_id,
                     "role": role,
                     "content": content,
                     "ts": _iso_now(),
@@ -88,15 +101,15 @@ class BusinessReporter:
             }
         )
 
-    def session_end(self, device_uid: str, session_no: int) -> None:
+    def session_end(self, session_id: str) -> None:
         if not self._enabled:
             return
         self._queue.put(
             {
                 "kind": "session_end",
                 "attempt": 0,
-                "url": f"{self._base_url}/api/internal/chat/sessions/{session_no}/end",
-                "payload": {"device_uid": device_uid},
+                "url": f"{self._base_url}/api/internal/chat/sessions/{session_id}/end",
+                "payload": {},
             }
         )
 

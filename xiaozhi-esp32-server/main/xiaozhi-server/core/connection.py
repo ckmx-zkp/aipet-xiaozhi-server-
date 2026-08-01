@@ -91,8 +91,6 @@ class ConnectionHandler:
         self.common_config = config
         self.config = copy.deepcopy(config)
         self.session_id = str(uuid.uuid4())
-        # 业务后端会话号（int64，epoch 毫秒；契约见 docs/05）
-        self.business_session_no = int(time.time() * 1000)
         self.logger = setup_logging()
         self.server = server  # 保存server实例的引用
 
@@ -224,7 +222,12 @@ class ConnectionHandler:
                 f"{self.client_ip} conn - Headers: {self.headers}"
             )
 
-            self.device_id = self.headers.get("device-id", None)
+            raw_device_id = self.headers.get("device-id", "")
+            self.device_id = raw_device_id.strip().lower() or None
+
+            # 业务后端首见建档/在线镜像：仅入队，不阻塞 WebSocket 握手或实时语音。
+            if self.device_id and business_reporter.enabled:
+                business_reporter.device_seen(self.device_id)
 
             # 认证通过,继续处理
             self.websocket = ws
@@ -1530,10 +1533,8 @@ class ConnectionHandler:
         try:
             # 业务后端旁路：会话结束通知（fire-and-forget，不阻塞清理）
             try:
-                if business_reporter.enabled and not self.need_bind:
-                    business_reporter.session_end(
-                        self.device_id, self.business_session_no
-                    )
+                if business_reporter.enabled and not self.need_bind and self.device_id:
+                    business_reporter.session_end(self.session_id)
             except Exception as e:
                 self.logger.bind(tag=TAG).error(f"业务旁路会话结束通知失败: {e}")
 
