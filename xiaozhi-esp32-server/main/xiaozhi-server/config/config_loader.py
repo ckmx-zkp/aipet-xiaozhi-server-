@@ -81,6 +81,9 @@ async def get_config_from_api_async(config):
     # 如果服务器没有prompt_template，则从本地配置读取
     if not config_data.get("prompt_template"):
         config_data["prompt_template"] = config.get("prompt_template")
+    # 业务后端旁路配置（以本地 data/.config.yaml 为准，manager-api 不下发）
+    if config.get("business_api"):
+        config_data["business_api"] = config["business_api"]
     return config_data
 
 

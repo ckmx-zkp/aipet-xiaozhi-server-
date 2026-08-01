@@ -18,8 +18,28 @@ if TYPE_CHECKING:
     from core.connection import ConnectionHandler
 
 from config.manage_api_client import report as manage_report
+from core.business_report import business_reporter, ROLE_USER, ROLE_ASSISTANT
 
 TAG = __name__
+
+
+def report_business_chat(conn: "ConnectionHandler", role: str, text: str):
+    """业务后端旁路（独立于 manager-api 上报，不受 chat_history_conf 影响）。
+
+    实时路径零阻塞：仅入队即返回，任何异常只记日志。
+    """
+    try:
+        if not business_reporter.enabled:
+            return
+        if getattr(conn, "need_bind", False):
+            return
+        if not text:
+            return
+        business_reporter.chat_event(
+            conn.device_id, conn.business_session_no, role, text
+        )
+    except Exception as e:
+        conn.logger.bind(tag=TAG).error(f"业务旁路入队失败: {e}")
 
 
 async def report(conn: "ConnectionHandler", type, text, opus_data, report_time):
@@ -97,6 +117,7 @@ def opus_to_wav(conn: "ConnectionHandler", pcm_data):
 
 
 def enqueue_tts_report(conn: "ConnectionHandler", text, opus_data):
+    report_business_chat(conn, ROLE_ASSISTANT, text)
     if not conn.read_config_from_api or conn.need_bind or not conn.report_tts_enable:
         return
     if conn.chat_history_conf == 0:
@@ -164,6 +185,7 @@ def enqueue_tool_report(conn: "ConnectionHandler", tool_name: str, tool_input: d
 
 
 def enqueue_asr_report(conn: "ConnectionHandler", text, opus_data):
+    report_business_chat(conn, ROLE_USER, text)
     if not conn.read_config_from_api or conn.need_bind or not conn.report_asr_enable:
         return
     if conn.chat_history_conf == 0:

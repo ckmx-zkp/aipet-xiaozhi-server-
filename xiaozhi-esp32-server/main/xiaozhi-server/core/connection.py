@@ -28,6 +28,7 @@ from core.utils.modules_initialize import (
     initialize_asr,
 )
 from core.handle.reportHandle import report, enqueue_tool_report
+from core.business_report import business_reporter
 from core.providers.tts.default import DefaultTTS
 from concurrent.futures import ThreadPoolExecutor
 from core.utils.dialogue import Message, Dialogue
@@ -90,6 +91,8 @@ class ConnectionHandler:
         self.common_config = config
         self.config = copy.deepcopy(config)
         self.session_id = str(uuid.uuid4())
+        # 业务后端会话号（int64，epoch 毫秒；契约见 docs/05）
+        self.business_session_no = int(time.time() * 1000)
         self.logger = setup_logging()
         self.server = server  # 保存server实例的引用
 
@@ -129,6 +132,9 @@ class ConnectionHandler:
         # 未来可以通过修改此处，调节asr的上报和tts的上报，目前默认都开启
         self.report_asr_enable = self.read_config_from_api
         self.report_tts_enable = self.read_config_from_api
+
+        # 业务后端旁路（幂等初始化；开关见 data/.config.yaml 的 business_api 段）
+        business_reporter.init(self.config)
 
         # 依赖的组件
         self.vad = None
@@ -1522,6 +1528,15 @@ class ConnectionHandler:
     async def close(self, ws=None):
         """资源清理方法"""
         try:
+            # 业务后端旁路：会话结束通知（fire-and-forget，不阻塞清理）
+            try:
+                if business_reporter.enabled and not self.need_bind:
+                    business_reporter.session_end(
+                        self.device_id, self.business_session_no
+                    )
+            except Exception as e:
+                self.logger.bind(tag=TAG).error(f"业务旁路会话结束通知失败: {e}")
+
             # 清理 VAD 连接资源
             if (
                     hasattr(self, "vad")

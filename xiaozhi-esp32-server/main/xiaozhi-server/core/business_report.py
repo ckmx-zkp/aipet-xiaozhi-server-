@@ -1,0 +1,156 @@
+"""
+业务后端旁路上报（AI Pet V0.2）
+
+把会话中的用户/助手消息原样旁路给业务后端（ai-pet-backend）。
+脱敏由 backend 落库前统一执行，本模块不做任何内容处理。
+
+设计约束（docs/05 契约）：
+- 不阻断实时语音路径：独立队列 + 独立工作线程，全部 fire-and-forget
+- 失败指数退避重试，有上限；最终失败仅记日志丢弃，不影响会话
+- 不含音频（R2：业务侧不存原始音频）
+- device_uid 直接使用设备 MAC（conn.device_id）
+- session_id 为业务会话号（int64，epoch 毫秒，连接建立时生成）
+- 开关与地址走本地 data/.config.yaml 的 business_api 段（智控台不下发）
+"""
+
+import queue
+import threading
+import time
+from datetime import datetime, timezone
+from typing import Optional
+
+import requests
+from loguru import logger
+
+TAG = __name__
+
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).astimezone().isoformat()
+
+
+class BusinessReporter:
+    """业务后端旁路上报器（进程级单例）"""
+
+    def __init__(self):
+        self._queue: "queue.Queue" = queue.Queue()
+        self._thread: Optional[threading.Thread] = None
+        self._stop = threading.Event()
+        self._enabled = False
+        self._base_url = ""
+        self._token = ""
+        self._timeout = 3
+        self._max_retry = 5
+
+    def init(self, config: dict) -> None:
+        """从全局配置初始化（幂等，可重复调用以刷新配置）"""
+        cfg = (config or {}).get("business_api", {}) or {}
+        self._enabled = bool(cfg.get("enabled", False))
+        self._base_url = str(cfg.get("base_url", "")).rstrip("/")
+        self._token = str(cfg.get("token", ""))
+        self._timeout = int(cfg.get("timeout", 3))
+        self._max_retry = int(cfg.get("max_retry", 5))
+        if self._enabled and not self._base_url:
+            logger.bind(tag=TAG).warning("business_api.enabled=true 但 base_url 为空，旁路停用")
+            self._enabled = False
+        if self._enabled and self._thread is None:
+            self._stop.clear()
+            self._thread = threading.Thread(
+                target=self._worker, name="business-report", daemon=True
+            )
+            self._thread.start()
+            logger.bind(tag=TAG).info(f"业务旁路已启用: {self._base_url}")
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    # ---- 对外 API（均不阻塞调用方） ----
+
+    def chat_event(self, device_uid: str, session_no: int, role: str, content: str) -> None:
+        if not self._enabled or not content:
+            return
+        self._queue.put(
+            {
+                "kind": "chat_event",
+                "attempt": 0,
+                "url": f"{self._base_url}/api/internal/chat/events",
+                "payload": {
+                    "device_uid": device_uid,
+                    "session_id": session_no,
+                    "role": role,
+                    "content": content,
+                    "ts": _iso_now(),
+                },
+            }
+        )
+
+    def session_end(self, device_uid: str, session_no: int) -> None:
+        if not self._enabled:
+            return
+        self._queue.put(
+            {
+                "kind": "session_end",
+                "attempt": 0,
+                "url": f"{self._base_url}/api/internal/chat/sessions/{session_no}/end",
+                "payload": {"device_uid": device_uid},
+            }
+        )
+
+    # ---- 工作线程 ----
+
+    def _worker(self):
+        while not self._stop.is_set():
+            try:
+                item = self._queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            try:
+                self._deliver(item)
+            except Exception as e:  # 防御：任何异常都不允许影响语音主链路
+                logger.bind(tag=TAG).error(f"业务旁路工作线程异常: {e}")
+            finally:
+                self._queue.task_done()
+
+    def _deliver(self, item: dict):
+        try:
+            resp = requests.post(
+                item["url"],
+                json=item["payload"],
+                headers={
+                    "X-Internal-Token": self._token,
+                    "Content-Type": "application/json",
+                },
+                timeout=self._timeout,
+            )
+            if 200 <= resp.status_code < 300:
+                logger.bind(tag=TAG).debug(f"业务旁路成功: {item['kind']}")
+                return
+            # 4xx 属契约/数据问题，重试无意义，直接丢弃并告警
+            if 400 <= resp.status_code < 500:
+                logger.bind(tag=TAG).error(
+                    f"业务旁路被拒({resp.status_code})，丢弃: {item['kind']} {resp.text[:200]}"
+                )
+                return
+            raise RuntimeError(f"HTTP {resp.status_code}")
+        except Exception as e:
+            item["attempt"] += 1
+            if item["attempt"] >= self._max_retry:
+                logger.bind(tag=TAG).error(
+                    f"业务旁路最终失败，丢弃: {item['kind']} attempts={item['attempt']} err={e}"
+                )
+                return
+            delay = min(2 ** item["attempt"], 30)
+            logger.bind(tag=TAG).warning(
+                f"业务旁路失败({e})，{delay}s 后第 {item['attempt']} 次重试: {item['kind']}"
+            )
+            timer = threading.Timer(delay, lambda: self._queue.put(item))
+            timer.daemon = True
+            timer.start()
+
+
+# 进程级单例
+business_reporter = BusinessReporter()
