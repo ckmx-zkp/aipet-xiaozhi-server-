@@ -123,6 +123,8 @@ class ConnectionHandler:
         # 用它判断旧的 LLM/MCP 后台任务是否仍然有效。
         self._turn_lock = threading.Lock()
         self._active_turn_id = 0
+        self._llm_stream_lock = threading.Lock()
+        self._llm_streams = {}
 
         # 线程任务相关
         self.loop = None  # 在 handle_connection 中获取运行中的事件循环
@@ -215,6 +217,7 @@ class ConnectionHandler:
         with self._turn_lock:
             self._active_turn_id += 1
             turn_id = self._active_turn_id
+        self._close_stale_llm_streams(turn_id)
         self.client_abort = False
         return turn_id
 
@@ -222,11 +225,52 @@ class ConnectionHandler:
         """使当前轮次失效；已经在执行的网络请求会自然返回，但不得再输出或调用工具。"""
         with self._turn_lock:
             self._active_turn_id += 1
-            return self._active_turn_id
+            turn_id = self._active_turn_id
+        self._close_stale_llm_streams(turn_id)
+        return turn_id
 
     def is_turn_active(self, turn_id):
         with self._turn_lock:
             return turn_id == self._active_turn_id
+
+    def _register_llm_stream(self, turn_id, stream):
+        """登记可关闭的流式请求；已失效的请求立即关闭而不是继续耗尽模型配额。"""
+        if not self.is_turn_active(turn_id):
+            self._close_llm_stream(stream)
+            return False
+        with self._llm_stream_lock:
+            self._llm_streams[turn_id] = stream
+        if not self.is_turn_active(turn_id):
+            self._remove_llm_stream(turn_id, stream)
+            self._close_llm_stream(stream)
+            return False
+        return True
+
+    def _remove_llm_stream(self, turn_id, stream):
+        with self._llm_stream_lock:
+            if self._llm_streams.get(turn_id) is stream:
+                self._llm_streams.pop(turn_id, None)
+
+    def _close_stale_llm_streams(self, active_turn_id):
+        with self._llm_stream_lock:
+            stale_streams = [
+                stream for turn_id, stream in self._llm_streams.items()
+                if turn_id != active_turn_id
+            ]
+            self._llm_streams = {
+                turn_id: stream for turn_id, stream in self._llm_streams.items()
+                if turn_id == active_turn_id
+            }
+        for stream in stale_streams:
+            self._close_llm_stream(stream)
+
+    def _close_llm_stream(self, stream):
+        close = getattr(stream, "close", None)
+        if callable(close):
+            try:
+                close()
+            except Exception as e:
+                self.logger.bind(tag=TAG).debug(f"Failed to close stale LLM stream: {e}")
 
     async def handle_connection(self, ws: websockets.ServerConnection):
         try:
@@ -1165,6 +1209,10 @@ class ConnectionHandler:
             self.logger.bind(tag=TAG).error(f"LLM 处理出错 {query}: {e}")
             return None
 
+        if not self._register_llm_stream(turn_id, llm_responses):
+            self.logger.bind(tag=TAG).debug("Closed stale LLM stream before consumption")
+            return False
+
         # 处理流式响应
         tool_call_flag = False
         # 支持多个并行工具调用 - 使用列表存储
@@ -1242,6 +1290,10 @@ class ConnectionHandler:
                             )
                         )
         except Exception as e:
+            self._remove_llm_stream(turn_id, llm_responses)
+            if not self.is_turn_active(turn_id):
+                self.logger.bind(tag=TAG).debug("Discarded stale LLM stream error")
+                return False
             self.logger.bind(tag=TAG).error(f"LLM stream processing error: {e}")
             self.tts.tts_text_queue.put(
                 TTSMessageDTO(
@@ -1260,6 +1312,7 @@ class ConnectionHandler:
                     )
                 )
             return
+        self._remove_llm_stream(turn_id, llm_responses)
         # 处理function call
         if tool_call_flag and self.is_turn_active(turn_id):
             bHasError = False
