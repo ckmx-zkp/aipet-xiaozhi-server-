@@ -9,7 +9,8 @@
 
 ## 已验证工具（固件）
 
-- `self.eye.look` / `blink` / `close` / `open` / `set_emotion`  
+- 真机当前上报名：`self_eye_look` / `self_eye_blink` / `self_eye_close` /
+  `self_eye_open` / `self_eye_set_emotion`（语义分别为 look/blink/close/open/set_emotion）
 - 公共：音量、设备状态等（上游 + 板级）  
 
 ## 本仓职责
@@ -34,5 +35,5 @@
 ## 验收
 
 - [ ] 语音「眨眨眼」→ 设备执行  
-- [ ] `set_emotion` 可被智能体或开场逻辑调用  
+- [ ] `self_eye_set_emotion` 可被智能体或开场逻辑调用  
 - [ ] Agent Worker 打满时，眨眼仍可用（资源隔离验收）  
