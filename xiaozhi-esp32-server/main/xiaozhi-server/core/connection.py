@@ -29,7 +29,12 @@ from core.utils.modules_initialize import (
 )
 from core.handle.reportHandle import report, enqueue_tool_report
 from core.business_report import business_reporter
-from core.persona_pack import build_persona_prompt, load_persona_pack, normalize_emotion
+from core.persona_pack import (
+    build_persona_prompt,
+    load_base_behavior_prompt,
+    load_persona_pack,
+    normalize_emotion,
+)
 from core.providers.tts.default import DefaultTTS
 from concurrent.futures import ThreadPoolExecutor
 from core.utils.dialogue import Message, Dialogue
@@ -796,8 +801,15 @@ class ConnectionHandler:
         pack, source = load_persona_pack(
             self.config, self.device_id
         )
-        prompt = build_persona_prompt(pack)
-        fingerprint = json.dumps(pack, ensure_ascii=False, sort_keys=True) if pack else prompt
+        base_behavior_prompt, base_behavior_profile = load_base_behavior_prompt(
+            self.config
+        )
+        prompt = build_persona_prompt(pack, base_behavior_prompt)
+        fingerprint = json.dumps(
+            {"pack": pack, "base_behavior_profile": base_behavior_profile},
+            ensure_ascii=False,
+            sort_keys=True,
+        )
         if fingerprint == self.persona_pack_fingerprint:
             return
         self.persona_pack = pack
@@ -806,7 +818,8 @@ class ConnectionHandler:
         self.change_system_prompt(prompt)
         version = (pack or {}).get("kb_version", "none")
         self.logger.bind(tag=TAG).info(
-            f"persona_pack refreshed source={source} kb_version={version}"
+            f"persona_pack refreshed source={source} kb_version={version} "
+            f"base_behavior={base_behavior_profile}"
         )
         if pack:
             emotion = normalize_emotion(pack.get("default_emotion"))

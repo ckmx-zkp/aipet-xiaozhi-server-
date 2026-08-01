@@ -14,6 +14,46 @@ _ONBOARDING_PROMPT = """你是小智，一只友好、耐心、可信赖的 AI �
 这是新设备或人设暂不可用时的临时引导会话：自然地陪伴用户，并提示用户可以在 App 中为宠物设置人设。
 不要编造个人经历、身份或能力；回答保持简洁、温暖。"""
 
+_DEFAULT_BASE_BEHAVIOR_PATH = "config/pet_behavior_prompt_library.json"
+_DEFAULT_BASE_BEHAVIOR_PROFILE = "pet_default"
+_base_behavior_cache: dict[str, Any] | None = None
+_base_behavior_cache_path = ""
+
+
+def load_base_behavior_prompt(config: dict) -> tuple[str, str]:
+    """Load the service-owned behavior layer without affecting backend persona data.
+
+    The library is intentionally local to xiaozhi-server: it governs output
+    length, interruption, tool confirmations and sleep behavior.  The backend
+    persona pack remains the sole source of zodiac/MBTI/user-specific style.
+    """
+    global _base_behavior_cache, _base_behavior_cache_path
+    settings = (config or {}).get("persona_base_behavior", {}) or {}
+    if settings.get("enabled", True) is False:
+        return "", "disabled"
+    profile_id = str(settings.get("profile_id", _DEFAULT_BASE_BEHAVIOR_PROFILE))
+    library_path = str(settings.get("library_path", _DEFAULT_BASE_BEHAVIOR_PATH))
+
+    try:
+        if _base_behavior_cache is None or _base_behavior_cache_path != library_path:
+            with Path(library_path).open("r", encoding="utf-8") as library_file:
+                loaded = json.load(library_file)
+            if not isinstance(loaded, dict):
+                raise ValueError("library root must be an object")
+            _base_behavior_cache = loaded
+            _base_behavior_cache_path = library_path
+
+        profiles = _base_behavior_cache.get("profiles", [])
+        for profile in profiles if isinstance(profiles, list) else []:
+            if isinstance(profile, dict) and profile.get("id") == profile_id:
+                prompt = str(profile.get("system_prompt", "")).strip()
+                if prompt:
+                    return prompt, profile_id
+        raise ValueError(f"profile not found: {profile_id}")
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as error:
+        logger.bind(tag=TAG).warning(f"base behavior prompt unavailable: {error}")
+        return "", "unavailable"
+
 
 def _cache_path(device_uid: str) -> Path:
     return _CACHE_DIR / f"{device_uid.replace(':', '_')}.json"
@@ -73,20 +113,26 @@ def load_persona_pack(config: dict, device_uid: str) -> tuple[dict[str, Any] | N
     return None, "onboarding"
 
 
-def build_persona_prompt(pack: dict[str, Any] | None) -> str:
-    """将后端固定七字段编译成单条 system prompt；不混入智控台本地人设。"""
+def build_persona_prompt(
+    pack: dict[str, Any] | None, base_behavior_prompt: str = ""
+) -> str:
+    """Compose fixed service behavior with the backend's dynamic persona pack."""
+    sections: list[str] = []
+    if base_behavior_prompt:
+        sections.append("[固定基础行为规则]\n" + base_behavior_prompt)
     if not pack:
-        return _ONBOARDING_PROMPT
+        sections.append(_ONBOARDING_PROMPT)
+        return "\n\n".join(sections)
 
-    sections: list[str] = ["以下是当前会话唯一有效的人设，请始终遵守："]
+    sections.append("以下是当前会话唯一有效的人设，请始终遵守：")
     for title, key in (("角色设定", "system_prompt_fragments"), ("表达风格", "style_constraints"), ("禁忌", "taboo")):
         values = pack.get(key, [])
         if isinstance(values, list):
             clean_values = [str(value).strip() for value in values if str(value).strip()]
             if clean_values:
                 sections.append(f"[{title}]\n" + "\n".join(f"- {value}" for value in clean_values))
-    if len(sections) == 1:
-        return _ONBOARDING_PROMPT
+    if len(sections) == (2 if base_behavior_prompt else 1):
+        sections.append(_ONBOARDING_PROMPT)
     return "\n\n".join(sections)
 
 

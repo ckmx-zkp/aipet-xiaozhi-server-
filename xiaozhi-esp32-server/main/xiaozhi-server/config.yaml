@@ -71,6 +71,12 @@ enable_greeting: false
 # short confirmation, rather than allowing a model-generated farewell.
 rest_close_keywords: ["休息", "睡觉", "睡了", "晚安", "去睡", "睡吧"]
 rest_close_confirmation: "晚安，先休息啦。"
+# 小智服务固定行为层：限制废话、动作确认和打断恢复；星座/MBTI 等动态
+# 个性仍只来自 backend 的 persona_pack。
+persona_base_behavior:
+  enabled: true
+  profile_id: pet_default
+  library_path: config/pet_behavior_prompt_library.json
 # 说完话是否开启提示音
 enable_stop_tts_notify: false
 # 说完话是否开启提示音，音效地址

@@ -1,7 +1,8 @@
 # 生产镜像，仅包含应用代码
 FROM ghcr.io/xinnan-tech/xiaozhi-esp32-server:server-base
 
-COPY main/xiaozhi-server .
+COPY xiaozhi-esp32-server/main/xiaozhi-server .
+COPY xiaozhi_ai_pet_base_behavior_prompt_library.md config/pet_behavior_prompt_library.json
 
 # 启动应用
 CMD ["python", "app.py"]
