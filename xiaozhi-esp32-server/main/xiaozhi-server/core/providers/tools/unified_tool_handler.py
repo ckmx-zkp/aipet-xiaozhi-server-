@@ -188,6 +188,11 @@ class UnifiedToolHandler:
             result = await self.tool_manager.execute_tool(function_name, arguments)
             if result and result.action != Action.ERROR:
                 conn.update_peripheral_state_from_tool(function_name, arguments)
+                if (
+                    function_name == "self_eye_close"
+                    and conn.should_close_for_rest()
+                ):
+                    await conn.close_for_rest()
             return result
 
         except Exception as e:

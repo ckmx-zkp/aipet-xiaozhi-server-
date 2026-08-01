@@ -237,6 +237,53 @@ class ConnectionHandler:
         self._close_stale_llm_streams(turn_id)
         return turn_id
 
+    def should_close_for_rest(self):
+        """Return true only for a rest/sleep request that closed the eyes."""
+        user_text = getattr(self, "current_user_text", "")
+        keywords = self.config.get(
+            "rest_close_keywords",
+            ["休息", "睡觉", "睡了", "晚安", "去睡", "睡吧"],
+        )
+        return any(keyword and keyword in user_text for keyword in keywords)
+
+    async def close_for_rest(self):
+        """Speak one short confirmation, then close this WebSocket session.
+
+        This intentionally bypasses the follow-up LLM turn after ``self_eye_close``.
+        Otherwise the model may continue with a long farewell while the device has
+        already entered its sleep pose.
+        """
+        if self.close_after_chat:
+            return
+
+        self.close_after_chat = True
+        self.client_abort = False
+        self.cancel_active_turn()
+
+        if not self.tts:
+            await self.close()
+            return
+
+        text = self.config.get("rest_close_confirmation", "晚安，先休息啦。")
+        self.sentence_id = uuid.uuid4().hex
+        self.tts.store_tts_text(self.sentence_id, text)
+        self.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=self.sentence_id,
+                sentence_type=SentenceType.FIRST,
+                content_type=ContentType.ACTION,
+            )
+        )
+        self.tts.tts_one_sentence(self, ContentType.TEXT, content_detail=text)
+        self.tts.tts_text_queue.put(
+            TTSMessageDTO(
+                sentence_id=self.sentence_id,
+                sentence_type=SentenceType.LAST,
+                content_type=ContentType.ACTION,
+            )
+        )
+        self.dialogue.put(Message(role="assistant", content=text))
+
     def is_turn_active(self, turn_id):
         with self._turn_lock:
             return turn_id == self._active_turn_id
