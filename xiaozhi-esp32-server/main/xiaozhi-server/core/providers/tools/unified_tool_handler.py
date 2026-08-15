@@ -13,6 +13,7 @@ from .server_mcp import ServerMCPExecutor
 from .device_iot import DeviceIoTExecutor
 from .device_mcp import DeviceMCPExecutor
 from .mcp_endpoint import MCPEndpointExecutor
+from .memory_mcp import MemoryMCPExecutor
 from core.handle.sendAudioHandle import send_display_message
 
 
@@ -33,6 +34,7 @@ class UnifiedToolHandler:
         self.device_iot_executor = DeviceIoTExecutor(conn)
         self.device_mcp_executor = DeviceMCPExecutor(conn)
         self.mcp_endpoint_executor = MCPEndpointExecutor(conn)
+        self.memory_mcp_executor = MemoryMCPExecutor(conn)
 
         # 注册执行器
         self.tool_manager.register_executor(
@@ -50,6 +52,9 @@ class UnifiedToolHandler:
         self.tool_manager.register_executor(
             ToolType.MCP_ENDPOINT, self.mcp_endpoint_executor
         )
+        self.tool_manager.register_executor(
+            ToolType.MEMORY_MCP, self.memory_mcp_executor
+        )
 
         # 初始化标志
         self.finish_init = False
@@ -62,6 +67,12 @@ class UnifiedToolHandler:
 
             # 初始化服务端MCP
             await self.server_mcp_executor.initialize()
+
+            # 初始化业务 Memory MCP（失败只降级为无记忆，不阻断语音）
+            try:
+                await self.memory_mcp_executor.initialize()
+            except Exception as e:
+                self.logger.warning(f"Memory MCP 初始化失败，保持无记忆会话: {e}")
 
             # 初始化MCP接入点
             await self._initialize_mcp_endpoint()
@@ -246,6 +257,7 @@ class UnifiedToolHandler:
         """清理资源"""
         try:
             await self.server_mcp_executor.cleanup()
+            await self.memory_mcp_executor.cleanup()
 
             # 清理MCP接入点连接
             if (

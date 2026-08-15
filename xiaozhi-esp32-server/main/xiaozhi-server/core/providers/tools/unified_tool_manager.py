@@ -91,8 +91,11 @@ class ToolManager:
                     response=f"工具类型 {tool_type.value} 的执行器未注册",
                 )
 
-            # 执行工具
-            self.logger.info(f"执行工具: {tool_name}，参数: {arguments}")
+            # 执行工具。记忆工具参数可能含用户事实，只记工具名。
+            if str(tool_name).startswith("memory"):
+                self.logger.info(f"执行工具: {tool_name}")
+            else:
+                self.logger.info(f"执行工具: {tool_name}，参数: {arguments}")
             result = await executor.execute(self.conn, tool_name, arguments)
             self.logger.debug(f"工具执行结果: {result}")
             return result

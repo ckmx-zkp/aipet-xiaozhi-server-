@@ -15,6 +15,7 @@ class ToolType(Enum):
     DEVICE_IOT = "device_iot"  # 设备端IoT
     DEVICE_MCP = "device_mcp"  # 设备端MCP
     MCP_ENDPOINT = "mcp_endpoint"  # MCP接入点
+    MEMORY_MCP = "memory_mcp"  # 业务长期记忆 MCP
 
 
 @dataclass

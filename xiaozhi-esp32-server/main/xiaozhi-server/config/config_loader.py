@@ -87,6 +87,9 @@ async def get_config_from_api_async(config):
     # Context providers can contain service credentials; keep them local.
     if config.get("context_providers"):
         config_data["context_providers"] = config["context_providers"]
+    # Memory MCP URL/token stay in local deployment config, never from manager-api.
+    if config.get("memory_mcp"):
+        config_data["memory_mcp"] = config["memory_mcp"]
     return config_data
 
 
