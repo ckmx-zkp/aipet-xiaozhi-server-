@@ -1,11 +1,14 @@
 """业务后端 persona_pack 的会话级拉取与本地降级缓存。"""
 
 import json
+import time
 from pathlib import Path
 from typing import Any
 
 import requests
 from loguru import logger
+
+from core.utils.integration_log import log_op
 
 TAG = __name__
 _CACHE_DIR = Path("data/persona_cache")
@@ -87,6 +90,8 @@ def load_persona_pack(config: dict, device_uid: str) -> tuple[dict[str, Any] | N
     token = str(business_api.get("token", ""))
     timeout = int(business_api.get("timeout", 3))
 
+    start = time.monotonic()
+    degrade_reason = None
     if business_api.get("enabled") and base_url and device_uid:
         try:
             response = requests.get(
@@ -98,18 +103,49 @@ def load_persona_pack(config: dict, device_uid: str) -> tuple[dict[str, Any] | N
                 pack = response.json()
                 if isinstance(pack, dict):
                     _write_cache(device_uid, pack)
+                    log_op(
+                        "persona_pack",
+                        device_uid=device_uid,
+                        latency_ms=int((time.monotonic() - start) * 1000),
+                        outcome="ok",
+                        source="remote",
+                    )
                     return pack, "remote"
-                raise ValueError("response is not an object")
-            if response.status_code != 404:
-                logger.bind(tag=TAG).warning(
+                degrade_reason = "invalid_json"
+                logger.bind(tag=TAG).debug("persona_pack response is not an object")
+            elif response.status_code != 404:
+                degrade_reason = f"HTTP {response.status_code}"
+                logger.bind(tag=TAG).debug(
                     f"persona_pack request failed: HTTP {response.status_code}"
                 )
+            else:
+                degrade_reason = "HTTP 404"
         except Exception as error:
-            logger.bind(tag=TAG).warning(f"persona_pack request failed: {error}")
+            degrade_reason = type(error).__name__
+            logger.bind(tag=TAG).debug(f"persona_pack request failed: {error}")
+    else:
+        degrade_reason = "remote_disabled"
 
+    latency_ms = int((time.monotonic() - start) * 1000)
     cached_pack = _read_cache(device_uid)
     if cached_pack is not None:
+        log_op(
+            "persona_pack",
+            device_uid=device_uid,
+            latency_ms=latency_ms,
+            outcome="degraded",
+            reason=degrade_reason,
+            source="cache",
+        )
         return cached_pack, "cache"
+    log_op(
+        "persona_pack",
+        device_uid=device_uid,
+        latency_ms=latency_ms,
+        outcome="degraded",
+        reason=degrade_reason,
+        source="onboarding",
+    )
     return None, "onboarding"
 
 

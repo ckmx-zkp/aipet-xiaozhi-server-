@@ -22,6 +22,8 @@ from typing import Optional
 import requests
 from loguru import logger
 
+from core.utils.integration_log import log_op
+
 TAG = __name__
 
 ROLE_USER = "user"
@@ -78,6 +80,8 @@ class BusinessReporter:
             {
                 "kind": "device_seen",
                 "attempt": 0,
+                "device_uid": device_uid,
+                "session_id": None,
                 "url": f"{self._base_url}/api/internal/devices/seen",
                 "payload": {"device_uid": device_uid},
             }
@@ -90,6 +94,8 @@ class BusinessReporter:
             {
                 "kind": "chat_event",
                 "attempt": 0,
+                "device_uid": device_uid,
+                "session_id": session_id,
                 "url": f"{self._base_url}/api/internal/chat/events",
                 "payload": {
                     "device_uid": device_uid,
@@ -108,6 +114,8 @@ class BusinessReporter:
             {
                 "kind": "session_end",
                 "attempt": 0,
+                "device_uid": None,
+                "session_id": session_id,
                 "url": f"{self._base_url}/api/internal/chat/sessions/{session_id}/end",
                 "payload": {},
             }
@@ -122,6 +130,8 @@ class BusinessReporter:
             {
                 "kind": "peripheral_event",
                 "attempt": 0,
+                "device_uid": device_uid,
+                "session_id": None,
                 "url": f"{self._base_url}/api/internal/peripheral/events",
                 "payload": {
                     "device_uid": device_uid,
@@ -149,6 +159,7 @@ class BusinessReporter:
                 self._queue.task_done()
 
     def _deliver(self, item: dict):
+        start = time.monotonic()
         try:
             resp = requests.post(
                 item["url"],
@@ -159,26 +170,51 @@ class BusinessReporter:
                 },
                 timeout=self._timeout,
             )
+            latency_ms = int((time.monotonic() - start) * 1000)
             if 200 <= resp.status_code < 300:
-                logger.bind(tag=TAG).debug(f"业务旁路成功: {item['kind']}")
+                log_op(
+                    item["kind"],
+                    device_uid=item.get("device_uid"),
+                    session_id=item.get("session_id"),
+                    latency_ms=latency_ms,
+                    outcome="ok",
+                    reason=f"HTTP {resp.status_code}",
+                )
                 return
             # 4xx 属契约/数据问题，重试无意义，直接丢弃并告警
             if 400 <= resp.status_code < 500:
-                logger.bind(tag=TAG).error(
-                    f"业务旁路被拒({resp.status_code})，丢弃: {item['kind']} {resp.text[:200]}"
+                log_op(
+                    item["kind"],
+                    device_uid=item.get("device_uid"),
+                    session_id=item.get("session_id"),
+                    latency_ms=latency_ms,
+                    outcome="dropped",
+                    reason=f"HTTP {resp.status_code}",
                 )
                 return
             raise RuntimeError(f"HTTP {resp.status_code}")
         except Exception as e:
+            latency_ms = int((time.monotonic() - start) * 1000)
             item["attempt"] += 1
             if item["attempt"] >= self._max_retry:
-                logger.bind(tag=TAG).error(
-                    f"业务旁路最终失败，丢弃: {item['kind']} attempts={item['attempt']} err={e}"
+                log_op(
+                    item["kind"],
+                    device_uid=item.get("device_uid"),
+                    session_id=item.get("session_id"),
+                    latency_ms=latency_ms,
+                    outcome="dropped",
+                    reason=f"attempts={item['attempt']} last_err={type(e).__name__}: {e}",
                 )
                 return
             delay = min(2 ** item["attempt"], 30)
-            logger.bind(tag=TAG).warning(
-                f"业务旁路失败({e})，{delay}s 后第 {item['attempt']} 次重试: {item['kind']}"
+            # 重试中间过程不刷屏，仅 debug
+            log_op(
+                item["kind"],
+                device_uid=item.get("device_uid"),
+                session_id=item.get("session_id"),
+                latency_ms=latency_ms,
+                outcome="retry",
+                reason=f"attempt={item['attempt']} delay={delay}s err={type(e).__name__}",
             )
             timer = threading.Timer(delay, lambda: self._queue.put(item))
             timer.daemon = True
