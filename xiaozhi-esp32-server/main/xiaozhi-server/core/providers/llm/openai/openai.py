@@ -15,6 +15,8 @@ THINKING_DISABLED_DOMAINS = {
     "bigmodel.cn": {"thinking": {"type": "disabled"}},
     "moonshot.cn": {"thinking": {"type": "disabled"}},
     "volces.com": {"thinking": {"type": "disabled"}},
+    # MiniMax accepts OpenAI-compatible low reasoning plus a separate field.
+    "minimaxi.com": {"reasoning_effort": "low", "reasoning_split": True},
 }
 
 
@@ -88,6 +90,18 @@ class LLMProvider(LLMProviderBase):
                 logger.bind(tag=TAG).info(f"为域名 {domain} 禁用思考模式，参数: {params}")
                 break
 
+    @staticmethod
+    def _visible_content(delta):
+        """Return only user-visible output; never forward provider reasoning."""
+        if delta is None:
+            return ""
+        # MiniMax emits these separately when reasoning_split=true.  They are
+        # deliberately ignored so neither TTS nor device display sees them.
+        if getattr(delta, "reasoning_content", None) or getattr(
+            delta, "reasoning_details", None
+        ):
+            logger.bind(tag=TAG).debug("Filtered provider reasoning from device output")
+        return getattr(delta, "content", "") or ""
     def response(self, session_id, dialogue, **kwargs):
         dialogue = self.normalize_dialogue(dialogue)
 
@@ -119,7 +133,7 @@ class LLMProvider(LLMProviderBase):
             for chunk in responses:
                 try:
                     delta = chunk.choices[0].delta if getattr(chunk, "choices", None) else None
-                    content = getattr(delta, "content", "") if delta else ""
+                    content = self._visible_content(delta)
                 except IndexError:
                     content = ""
                 if content:
@@ -161,10 +175,19 @@ class LLMProvider(LLMProviderBase):
         stream = self.client.chat.completions.create(**request_params)
 
         try:
+            is_active = True
             for chunk in stream:
                 if getattr(chunk, "choices", None):
                     delta = chunk.choices[0].delta
-                    content = getattr(delta, "content", "")
+                    content = self._visible_content(delta)
+                    if "<think>" in content:
+                        is_active = False
+                        content = content.split("<think>")[0]
+                    if "</think>" in content:
+                        is_active = True
+                        content = content.split("</think>")[-1]
+                    if not is_active:
+                        content = ""
                     tool_calls = getattr(delta, "tool_calls", None)
                     yield content, tool_calls
                 elif isinstance(getattr(chunk, "usage", None), CompletionUsage):

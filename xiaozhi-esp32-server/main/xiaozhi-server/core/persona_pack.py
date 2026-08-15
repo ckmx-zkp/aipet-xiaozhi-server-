@@ -114,7 +114,9 @@ def load_persona_pack(config: dict, device_uid: str) -> tuple[dict[str, Any] | N
 
 
 def build_persona_prompt(
-    pack: dict[str, Any] | None, base_behavior_prompt: str = ""
+    pack: dict[str, Any] | None,
+    base_behavior_prompt: str = "",
+    dynamic_context: str = "",
 ) -> str:
     """Compose fixed service behavior with the backend's dynamic persona pack."""
     sections: list[str] = []
@@ -122,8 +124,14 @@ def build_persona_prompt(
         sections.append("[固定基础行为规则]\n" + base_behavior_prompt)
     if not pack:
         sections.append(_ONBOARDING_PROMPT)
+        if dynamic_context:
+            sections.append(
+                "[唤醒时动态上下文]\n"
+                "以下是本次唤醒时提供的短摘要；仅在与用户当前问题相关时使用，"
+                "不要提及其来源，也不要把未出现的信息当作事实。\n"
+                + dynamic_context
+            )
         return "\n\n".join(sections)
-
     sections.append("以下是当前会话唯一有效的人设，请始终遵守：")
     for title, key in (("角色设定", "system_prompt_fragments"), ("表达风格", "style_constraints"), ("禁忌", "taboo")):
         values = pack.get(key, [])
@@ -133,6 +141,13 @@ def build_persona_prompt(
                 sections.append(f"[{title}]\n" + "\n".join(f"- {value}" for value in clean_values))
     if len(sections) == (2 if base_behavior_prompt else 1):
         sections.append(_ONBOARDING_PROMPT)
+    if dynamic_context:
+        sections.append(
+            "[唤醒时动态上下文]\n"
+            "以下是本次唤醒时提供的短摘要；仅在与用户当前问题相关时使用，"
+            "不要提及其来源，也不要把未出现的信息当作事实。\n"
+            + dynamic_context
+        )
     return "\n\n".join(sections)
 
 

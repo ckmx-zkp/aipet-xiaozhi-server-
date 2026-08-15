@@ -804,9 +804,16 @@ class ConnectionHandler:
         base_behavior_prompt, base_behavior_profile = load_base_behavior_prompt(
             self.config
         )
-        prompt = build_persona_prompt(pack, base_behavior_prompt)
+        dynamic_context = str(
+            getattr(self.prompt_manager, "context_data", "") or ""
+        ).strip()
+        prompt = build_persona_prompt(pack, base_behavior_prompt, dynamic_context)
         fingerprint = json.dumps(
-            {"pack": pack, "base_behavior_profile": base_behavior_profile},
+            {
+                "pack": pack,
+                "base_behavior_profile": base_behavior_profile,
+                "dynamic_context": dynamic_context,
+            },
             ensure_ascii=False,
             sort_keys=True,
         )

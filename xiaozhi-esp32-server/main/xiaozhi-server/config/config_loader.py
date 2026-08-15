@@ -84,6 +84,9 @@ async def get_config_from_api_async(config):
     # 业务后端旁路配置（以本地 data/.config.yaml 为准，manager-api 不下发）
     if config.get("business_api"):
         config_data["business_api"] = config["business_api"]
+    # Context providers can contain service credentials; keep them local.
+    if config.get("context_providers"):
+        config_data["context_providers"] = config["context_providers"]
     return config_data
 
 

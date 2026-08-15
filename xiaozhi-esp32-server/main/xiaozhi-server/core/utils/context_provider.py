@@ -32,7 +32,9 @@ class ContextDataProvider:
                 headers["device-id"] = device_id
                 
                 # 发送请求
-                response = httpx.get(url, headers=headers, timeout=3)
+                # The provider is on the wake-up path; cap its latency budget.
+                timeout = min(float(provider.get("timeout", 0.5)), 0.5)
+                response = httpx.get(url, headers=headers, timeout=timeout)
                 
                 if response.status_code == 200:
                     result = response.json()
@@ -45,7 +47,8 @@ class ContextDataProvider:
                                     formatted_lines.append(f"- **{k}：** {v}")
                             elif isinstance(data, list):
                                 for item in data:
-                                    formatted_lines.append(f"- {item}")
+                                    if isinstance(item, (str, int, float, bool)):
+                                        formatted_lines.append(f"- {item}")
                             else:
                                 formatted_lines.append(f"- {data}")
                         else:
@@ -57,8 +60,11 @@ class ContextDataProvider:
             except Exception as e:
                 self.logger.bind(tag=TAG).error(f"获取上下文数据 {url} 失败: {e}")
         
-        # 将所有格式化后的行拼接成一个字符串
-        self.context_data = "\n".join(formatted_lines)
+        # Defense in depth against oversized provider responses.
+        self.context_data = "\n".join(formatted_lines[:6])[:800]
         if self.context_data:
-            self.logger.bind(tag=TAG).debug(f"已注入动态上下文数据:\n{self.context_data}")
+            self.logger.bind(tag=TAG).debug(
+                f"Dynamic context injected: items={min(len(formatted_lines), 6)} "
+                f"chars={len(self.context_data)}"
+            )
         return self.context_data
