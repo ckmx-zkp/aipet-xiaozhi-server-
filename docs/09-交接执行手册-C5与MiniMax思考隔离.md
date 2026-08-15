@@ -157,3 +157,33 @@ docker logs --tail 150 xiaozhi-esp32-server
 - Memory MCP 仍未接入，等待后端确定 streamable HTTP MCP/stdio 契约；本次不要擅自实现或变更协议。
 - 设备 MCP 仅做路由，不改固件协议。
 
+## 9. 执行结果（2026-08-16）
+
+本手册两个目标的代码侧与部署侧均已完成，仅剩真机验收。
+
+### 代码（本地已提交 `e93bb14`，分支 main）
+
+- 新增 `core/utils/think_filter.py`：`ThinkTagFilter` 跨 chunk 状态机，`<think>` 标签被拆到多个 chunk 也不会泄漏进 TTS；同时修复旧逻辑“同 chunk 双标签吞正文”缺陷。
+- `core/providers/llm/openai/openai.py`：`response()` 与 `response_with_functions()` 均换用该过滤器；MiniMax（api.minimaxi.com）extra_body 增加 `thinking: {type: disabled}` 双保险（原有 `reasoning_effort: low` + `reasoning_split: true` 保留）。
+- `core/connection.py`：`_extract_direct_answer_response` 两个返回点加 `<think>` 剥离兜底。
+
+### 部署（2026-08-16 已完成）
+
+- 服务器 `/opt/xiaozhi-server` 构建镜像 `xiaozhi-aipet-server:v0.9.6-b8` 并已切换 compose tag 重启；**线上从 b6 直接跳到 b8（b7 未上线即废弃）**。
+- 重要发现：部署前核对发现服务器源码树的 `connection.py` 缺 `93d1997` 的 dynamic_context 合入块（`_refresh_persona_pack` 调 `build_persona_prompt` 未传 dynamic_context）——意味着 b7 即使上线 C5 上下文也不会进 Prompt；b8 已补齐。
+
+### 容器级验收（2026-08-16 全部通过）
+
+- 容器启动日志干净。
+- 容器内 `ThinkTagFilter` 行为测试（拆分/双标签/未闭合/逐字节一致性）通过。
+- 容器内按私有配置直连 C5 `GET http://host.docker.internal:8010/api/internal/context/device`：200、7ms，真机 `8c:fd:49:0c:a8:78` 返回 3 条上下文。
+- 主机级 curl 复核：已认领真机 data 非空、未知设备 `data:[]`、无 token 401。
+
+### 模型现状
+
+智能体“测试1” LLM = MiniMax-M2.5（`https://api.minimaxi.com/v1`，走 openai provider）；ASR = 豆包流式 2.0；TTS = 火山双向流式·湾湾小何。
+
+### 剩余待办
+
+真机验收（唤醒后不再播报任何 think 内容；首轮回复能体现 C5 上下文；backend 宕机时 0.5s 超时降级、首轮仍快速回复），以及五项旁路 E2E 落库证据仍待真机取。
+
