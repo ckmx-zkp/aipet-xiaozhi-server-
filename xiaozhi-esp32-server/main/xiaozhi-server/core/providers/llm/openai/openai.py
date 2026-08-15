@@ -3,6 +3,7 @@ import openai
 from openai.types import CompletionUsage
 from config.logger import setup_logging
 from core.utils.util import check_model_key
+from core.utils.think_filter import ThinkTagFilter
 from core.providers.llm.base import LLMProviderBase
 from urllib.parse import urlparse
 
@@ -16,7 +17,7 @@ THINKING_DISABLED_DOMAINS = {
     "moonshot.cn": {"thinking": {"type": "disabled"}},
     "volces.com": {"thinking": {"type": "disabled"}},
     # MiniMax accepts OpenAI-compatible low reasoning plus a separate field.
-    "minimaxi.com": {"reasoning_effort": "low", "reasoning_split": True},
+    "minimaxi.com": {"reasoning_effort": "low", "reasoning_split": True, "thinking": {"type": "disabled"}},
 }
 
 
@@ -128,7 +129,7 @@ class LLMProvider(LLMProviderBase):
 
         responses = self.client.chat.completions.create(**request_params)
 
-        is_active = True
+        think_filter = ThinkTagFilter()
         try:            
             for chunk in responses:
                 try:
@@ -137,14 +138,12 @@ class LLMProvider(LLMProviderBase):
                 except IndexError:
                     content = ""
                 if content:
-                    if "<think>" in content:
-                        is_active = False
-                        content = content.split("<think>")[0]
-                    if "</think>" in content:
-                        is_active = True
-                        content = content.split("</think>")[-1]
-                    if is_active:
+                    content = think_filter.feed(content)
+                    if content:
                         yield content
+            tail = think_filter.flush()
+            if tail:
+                yield tail
         finally:
             responses.close()
 
@@ -175,19 +174,11 @@ class LLMProvider(LLMProviderBase):
         stream = self.client.chat.completions.create(**request_params)
 
         try:
-            is_active = True
+            think_filter = ThinkTagFilter()
             for chunk in stream:
                 if getattr(chunk, "choices", None):
                     delta = chunk.choices[0].delta
-                    content = self._visible_content(delta)
-                    if "<think>" in content:
-                        is_active = False
-                        content = content.split("<think>")[0]
-                    if "</think>" in content:
-                        is_active = True
-                        content = content.split("</think>")[-1]
-                    if not is_active:
-                        content = ""
+                    content = think_filter.feed(self._visible_content(delta))
                     tool_calls = getattr(delta, "tool_calls", None)
                     yield content, tool_calls
                 elif isinstance(getattr(chunk, "usage", None), CompletionUsage):
@@ -197,5 +188,8 @@ class LLMProvider(LLMProviderBase):
                         f"输出 {getattr(usage_info, 'completion_tokens', '未知')}，"
                         f"共计 {getattr(usage_info, 'total_tokens', '未知')}"
                     )
+            tail = think_filter.flush()
+            if tail:
+                yield tail, None
         finally:
             stream.close()

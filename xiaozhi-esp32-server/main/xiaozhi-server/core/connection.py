@@ -2035,7 +2035,8 @@ class ConnectionHandler:
         try:
             data = json.loads(arguments_str)
             if isinstance(data, dict) and "response" in data:
-                return data["response"]
+                # 兜底剥除可能残留的 <think> 思考内容
+                return re.sub(r"<think>.*?</think>", "", data["response"], flags=re.DOTALL).replace("<think>", "").replace("</think>", "")
         except (json.JSONDecodeError, TypeError):
             pass
         # Fallback：流式阶段 JSON 可能不完整，使用字符串提取
@@ -2055,7 +2056,8 @@ class ConnectionHandler:
             raw = raw[:-1]
         # 处理 JSON 转义
         raw = raw.replace('\\"', '"').replace('\\n', '\n').replace('\\\\', '\\')
-        return raw
+        # 兜底剥除可能残留的 <think> 思考内容
+        return re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).replace("<think>", "").replace("</think>", "")
 
     @staticmethod
     def _clean_response_garbage(text):
