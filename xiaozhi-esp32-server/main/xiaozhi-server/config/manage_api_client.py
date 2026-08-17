@@ -246,6 +246,18 @@ async def report(
         return None
 
 
+async def get_bound_devices() -> Optional[list]:
+    """列出智控台已绑定设备 MAC。"""
+    if not ManageApiClient._instance:
+        return None
+    try:
+        return await ManageApiClient._instance._execute_async_request(
+            "POST", "/config/bound-devices"
+        )
+    except Exception:
+        return None
+
+
 async def lookup_address_book(caller_mac: str, nickname: str) -> Optional[Dict]:
     """根据昵称查找目标设备"""
     if not ManageApiClient._instance:

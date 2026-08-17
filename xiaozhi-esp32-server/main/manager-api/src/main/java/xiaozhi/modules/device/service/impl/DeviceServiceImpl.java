@@ -548,6 +548,19 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     }
 
     @Override
+    public List<String> listBoundMacAddresses() {
+        List<DeviceEntity> devices = baseDao.selectList(null);
+        if (devices == null) {
+            return List.of();
+        }
+        return devices.stream()
+                .map(device -> StringUtils.isNotBlank(device.getMacAddress()) ? device.getMacAddress()
+                        : device.getId())
+                .filter(StringUtils::isNotBlank)
+                .toList();
+    }
+
+    @Override
     public void manualAddDevice(Long userId, DeviceManualAddDTO dto) {
         // 检查mac是否已存在
         QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();

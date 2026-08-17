@@ -3,6 +3,8 @@ FROM ghcr.io/xinnan-tech/xiaozhi-esp32-server:server-base
 
 COPY xiaozhi-esp32-server/main/xiaozhi-server .
 COPY xiaozhi_ai_pet_base_behavior_prompt_library.md config/pet_behavior_prompt_library.json
+# 智控台设备表回退同步（manager-api /config/bound-devices 未部署时使用）
+RUN pip install --no-cache-dir pymysql==1.1.1
 
 # 启动应用
 CMD ["python", "app.py"]

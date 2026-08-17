@@ -138,4 +138,9 @@ public interface DeviceService extends BaseService<DeviceEntity> {
      */
     Object callDeviceTool(String deviceId, String toolName, Map<String, Object> arguments);
 
+    /**
+     * 列出智控台已绑定设备的 MAC，供语音服务同步到业务后端。
+     */
+    List<String> listBoundMacAddresses();
+
     }

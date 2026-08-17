@@ -10,6 +10,8 @@ from core.http_server import SimpleHttpServer
 from core.websocket_server import WebSocketServer
 from core.utils.util import check_ffmpeg_installed
 from core.utils.gc_manager import get_gc_manager
+from core.business_report import business_reporter
+from core.console_device_sync import run_console_device_sync
 
 TAG = __name__
 logger = setup_logging()
@@ -67,6 +69,10 @@ async def main():
     # 启动全局GC管理器（5分钟清理一次）
     gc_manager = get_gc_manager(interval_seconds=300)
     await gc_manager.start()
+
+    # 业务旁路与智控台设备导入不依赖首个 WebSocket 连接。
+    business_reporter.init(config)
+    sync_task = asyncio.create_task(run_console_device_sync(config))
 
     # 启动 WebSocket 服务器
     ws_server = WebSocketServer(config)
@@ -133,12 +139,16 @@ async def main():
         # 取消所有任务（关键修复点）
         stdin_task.cancel()
         ws_task.cancel()
+        sync_task.cancel()
         if ota_task:
             ota_task.cancel()
 
         # 等待任务终止（必须加超时）
+        pending = [stdin_task, ws_task, sync_task]
+        if ota_task:
+            pending.append(ota_task)
         await asyncio.wait(
-            [stdin_task, ws_task, ota_task] if ota_task else [stdin_task, ws_task],
+            pending,
             timeout=3.0,
             return_when=asyncio.ALL_COMPLETED,
         )

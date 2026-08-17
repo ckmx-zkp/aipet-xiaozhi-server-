@@ -90,6 +90,8 @@ async def get_config_from_api_async(config):
     # Memory MCP URL/token stay in local deployment config, never from manager-api.
     if config.get("memory_mcp"):
         config_data["memory_mcp"] = config["memory_mcp"]
+    if config.get("console_device_sync"):
+        config_data["console_device_sync"] = config["console_device_sync"]
     return config_data
 
 

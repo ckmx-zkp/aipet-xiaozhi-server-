@@ -16,6 +16,7 @@ import xiaozhi.common.validator.ValidatorUtils;
 import xiaozhi.modules.config.dto.AgentModelsDTO;
 import xiaozhi.modules.config.dto.CorrectWordsDTO;
 import xiaozhi.modules.config.service.ConfigService;
+import xiaozhi.modules.device.service.DeviceService;
 
 /**
  * xiaozhi-server 配置获取
@@ -28,6 +29,7 @@ import xiaozhi.modules.config.service.ConfigService;
 @AllArgsConstructor
 public class ConfigController {
     private final ConfigService configService;
+    private final DeviceService deviceService;
 
     @PostMapping("server-base")
     @Operation(summary = "服务端获取配置接口")
@@ -51,5 +53,11 @@ public class ConfigController {
         ValidatorUtils.validateEntity(dto);
         List<String> list = configService.getCorrectWords(dto.getMacAddress());
         return new Result<Object>().ok(list);
+    }
+
+    @PostMapping("bound-devices")
+    @Operation(summary = "列出智控台已绑定设备 MAC，供业务后端建档")
+    public Result<List<String>> getBoundDevices() {
+        return new Result<List<String>>().ok(deviceService.listBoundMacAddresses());
     }
 }
