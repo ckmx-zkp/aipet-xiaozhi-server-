@@ -151,7 +151,7 @@ docker logs --tail 150 xiaozhi-esp32-server
 
 ## 8. 安全与边界
 
-- C5 只走内网 `http://host.docker.internal:8010/api/internal/*`，不走公网。
+- C5 只走 Docker 内网 `http://web-api:8000/api/internal/*`，不走公网。2026-08-18 起不再使用 `host.docker.internal:8010`（UFW 未放行 8010，容器访问会超时）。
 - `device_uid`/`device-id` 一律小写冒号 MAC；`session_id` 保持 UUID 字符串。
 - C5 上下文只允许短摘要；不要放完整知识库、原始聊天、敏感字段或内部 ID。
 - Memory MCP 仍未接入，等待后端确定 streamable HTTP MCP/stdio 契约；本次不要擅自实现或变更协议。
