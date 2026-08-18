@@ -161,10 +161,29 @@ class UnifiedToolHandler:
                 for call in function_call_data["function_calls"]:
                     if turn_id is not None and not conn.is_turn_active(turn_id):
                         return ActionResponse(action=Action.NONE)
+                    arguments = call.get("arguments", {})
+                    if isinstance(arguments, str):
+                        try:
+                            arguments = json.loads(arguments) if arguments else {}
+                        except json.JSONDecodeError:
+                            responses.append(
+                                ActionResponse(action=Action.ERROR, response="无法解析函数参数")
+                            )
+                            break
+                    if not isinstance(arguments, dict):
+                        responses.append(
+                            ActionResponse(action=Action.ERROR, response="函数参数必须是对象")
+                        )
+                        break
                     result = await self.tool_manager.execute_tool(
-                        call["name"], call.get("arguments", {})
+                        call["name"], arguments
                     )
                     responses.append(result)
+                    should_stop = await self._handle_successful_tool_call(
+                        conn, call["name"], arguments, result
+                    )
+                    if should_stop:
+                        break
                 return self._combine_responses(responses)
 
             # 处理单函数调用
@@ -197,18 +216,26 @@ class UnifiedToolHandler:
 
             # 执行工具调用
             result = await self.tool_manager.execute_tool(function_name, arguments)
-            if result and result.action != Action.ERROR:
-                conn.update_peripheral_state_from_tool(function_name, arguments)
-                if (
-                    function_name == "self_eye_close"
-                    and conn.should_close_for_rest()
-                ):
-                    await conn.close_for_rest()
+            await self._handle_successful_tool_call(
+                conn, function_name, arguments, result
+            )
             return result
 
         except Exception as e:
             self.logger.error(f"处理function call错误: {e}")
             return ActionResponse(action=Action.ERROR, response=str(e))
+
+    async def _handle_successful_tool_call(
+        self, conn, function_name: str, arguments: Dict[str, Any], result
+    ) -> bool:
+        """Apply side effects shared by single and batched tool calls."""
+        if not result or result.action == Action.ERROR:
+            return False
+        conn.update_peripheral_state_from_tool(function_name, arguments)
+        if function_name == "self_eye_close" and conn.should_close_for_rest():
+            await conn.close_for_rest()
+            return True
+        return False
 
     def _combine_responses(self, responses: List[ActionResponse]) -> ActionResponse:
         """合并多个函数调用的响应"""

@@ -152,13 +152,14 @@ class BusinessReporter:
             except queue.Empty:
                 continue
             try:
-                self._deliver(item)
+                self._deliver_in_order(item)
             except Exception as e:  # 防御：任何异常都不允许影响语音主链路
                 logger.bind(tag=TAG).error(f"业务旁路工作线程异常: {e}")
             finally:
                 self._queue.task_done()
 
-    def _deliver(self, item: dict):
+    def _deliver_in_order(self, item: dict):
+        """Retry without allowing dependent queue items to overtake this item."""
         start = time.monotonic()
         try:
             resp = requests.post(
@@ -216,9 +217,10 @@ class BusinessReporter:
                 outcome="retry",
                 reason=f"attempt={item['attempt']} delay={delay}s err={type(e).__name__}",
             )
-            timer = threading.Timer(delay, lambda: self._queue.put(item))
-            timer.daemon = True
-            timer.start()
+            # Waiting only blocks the reporting thread; the voice path remains
+            # fire-and-forget. Keeping this item active preserves FIFO ordering.
+            if not self._stop.wait(delay):
+                self._deliver_in_order(item)
 
 
 # 进程级单例
