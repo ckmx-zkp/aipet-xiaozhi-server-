@@ -1,0 +1,37 @@
+xiaozhi-esp32-server/main/xiaozhi-server/core/business_report.py
+  s_1856acf97e52f0::t_c835911d12bc1b 155
+  s_1856acf97e52f0::t_83d41280388fbf 161-162,220-223
+xiaozhi-esp32-server/main/xiaozhi-server/core/providers/tools/memory_mcp/executor.py
+  s_1856acf97e52f0::t_e9c0ae642ce03b 96-98
+  s_1856acf97e52f0::t_83d41280388fbf 90-95,99-101
+docs/06-开发任务清单.md
+  s_1856acf97e52f0::t_8fcc57ca8a774a 52-53,78-79
+  s_1856acf97e52f0::t_77f4ecfd5c42a6 13
+  s_1856acf97e52f0::t_e9c0ae642ce03b 19-25,29
+  s_1856acf97e52f0::t_e9a093c88dfb69 3,8-10,18,26-28
+xiaozhi-esp32-server/main/xiaozhi-server/core/providers/tools/memory_mcp/sanitize.py
+  s_1856acf97e52f0::t_83d41280388fbf 61-66
+docs/05-与业务后端集成接口.md
+  s_1856acf97e52f0::t_e9c0ae642ce03b 38,83,86-89
+docs/08-部署配置基线与运维.md
+  s_1856acf97e52f0::t_3db3fe2acc009d 13,48,118
+xiaozhi-esp32-server/main/xiaozhi-server/core/providers/tools/unified_tool_handler.py
+  s_1856acf97e52f0::t_e9c0ae642ce03b 165-177
+  s_1856acf97e52f0::t_83d41280388fbf 164,179,182-186,219-221,228-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f6ba94f3e284c34b6ff91786b95b455c86ea2363",
+  "prompts": {},
+  "sessions": {
+    "s_1856acf97e52f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01304-079c-7983-8978-6a0fb9de69a9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
