@@ -1,0 +1,27 @@
+xiaozhi-esp32-server/main/xiaozhi-server/core/handle/receiveAudioHandle.py
+  s_1856acf97e52f0::t_f6ee3062a5f722 118
+docs/06-开发任务清单.md
+  s_1856acf97e52f0::t_f6ee3062a5f722 84,92-105
+docs/08-部署配置基线与运维.md
+  s_1856acf97e52f0::t_f6ee3062a5f722 44
+xiaozhi-esp32-server/main/xiaozhi-server/config.yaml
+  s_1856acf97e52f0::t_f6ee3062a5f722 60-61
+xiaozhi-esp32-server/main/xiaozhi-server/core/connection.py
+  s_1856acf97e52f0::t_f6ee3062a5f722 210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a1da89dd1dc571a204c8e2fe99847ebc3dfa9b60",
+  "prompts": {},
+  "sessions": {
+    "s_1856acf97e52f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01304-079c-7983-8978-6a0fb9de69a9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
