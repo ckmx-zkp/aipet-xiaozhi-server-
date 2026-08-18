@@ -1,0 +1,21 @@
+docs/08-部署配置基线与运维.md
+  s_1856acf97e52f0::t_ee88dbf9b6245c 13,49
+docs/06-开发任务清单.md
+  s_1856acf97e52f0::t_ee88dbf9b6245c 8-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "99aa35383ab36ff3abfc131dee6f29acbf389bf0",
+  "prompts": {},
+  "sessions": {
+    "s_1856acf97e52f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a01304-079c-7983-8978-6a0fb9de69a9",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
