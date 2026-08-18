@@ -58,7 +58,12 @@ def prepare_arguments(
         hints = args.pop("retrieval_hints", None)
         query = str(args.get("query") or "").strip()
         if hints:
-            hint_text = hints if isinstance(hints, str) else str(hints)
+            if isinstance(hints, list):
+                hint_text = " ".join(
+                    str(item).strip() for item in hints[:20] if str(item).strip()
+                )
+            else:
+                hint_text = str(hints).strip()
             query = f"{query} {hint_text}".strip() if query else hint_text.strip()
         args["query"] = query
         if "limit" in args:

@@ -87,7 +87,18 @@ class MemoryMCPExecutor(ToolExecutor):
         if not device_uid:
             return self._degraded(mcp_name, "missing_device_uid")
 
-        args = prepare_arguments(mcp_name, arguments, device_uid)
+        raw_arguments = dict(arguments or {})
+        if mcp_name == "memory.search" and not raw_arguments.get("retrieval_hints"):
+            persona_pack = getattr(conn, "persona_pack", None)
+            if isinstance(persona_pack, dict):
+                hints = persona_pack.get("retrieval_hints")
+                if isinstance(hints, list):
+                    clean_hints = [
+                        str(item).strip() for item in hints if str(item).strip()
+                    ]
+                    if clean_hints:
+                        raw_arguments["retrieval_hints"] = clean_hints
+        args = prepare_arguments(mcp_name, raw_arguments, device_uid)
         if mcp_name == "memory.forget" and args.get("memory_id") is None:
             return self._degraded(mcp_name, "invalid_memory_id")
         if mcp_name == "memory.add" and (not args.get("title") or not args.get("content")):
