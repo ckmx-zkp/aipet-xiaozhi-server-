@@ -1,0 +1,24 @@
+docs/06-开发任务清单.md
+  s_50a069c5b414d1::t_927e4e14e8dfe8 119-128
+  s_50a069c5b414d1::t_de6eeca46b0a5c 129-130
+docs/05-与业务后端集成接口.md
+  s_50a069c5b414d1::t_927e4e14e8dfe8 22-29,33-38
+  s_50a069c5b414d1::t_28f15bea74fa9e 30-32
+  s_50a069c5b414d1::t_de6eeca46b0a5c 39-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "16b1aa4c44e6204caa32c12138cf65884b1728be",
+  "prompts": {},
+  "sessions": {
+    "s_50a069c5b414d1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a018a2-a79d-7722-8aae-023b59a77c69",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
