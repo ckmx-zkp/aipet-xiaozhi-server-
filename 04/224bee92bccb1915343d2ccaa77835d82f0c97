@@ -1,0 +1,20 @@
+AGENTS.md
+  s_c40701e4446788::t_2a344759bb4f4c 43-45
+  s_c40701e4446788::t_3939d4f22037d7 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "04224bee92bccb1915343d2ccaa77835d82f0c97",
+  "prompts": {},
+  "sessions": {
+    "s_c40701e4446788": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07ffe-a000-7941-a7d8-d40f3c0f5962",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
