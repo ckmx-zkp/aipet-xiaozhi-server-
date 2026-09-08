@@ -1,0 +1,24 @@
+deploy/music-aipet/verify_content_web.py
+  s_c40701e4446788::t_12596b2436413b 1-43
+deploy/music-aipet/upgrade_content_web.py
+  s_c40701e4446788::t_ef4cc0dd99fb5c 1-44
+docs/10-音乐与内容MCP部署-20260908.md
+  s_c40701e4446788::t_41d80ac59d808f 3-12,14
+  s_c40701e4446788::t_9601ae9f625aba 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "999759f6967a9493011fd58f3b944f7b83f6797e",
+  "prompts": {},
+  "sessions": {
+    "s_c40701e4446788": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a07ffe-a000-7941-a7d8-d40f3c0f5962",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
