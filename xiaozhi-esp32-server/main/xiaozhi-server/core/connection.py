@@ -1261,6 +1261,10 @@ class ConnectionHandler:
             asyncio.run_coroutine_threadsafe(self.func_handler._initialize(), self.loop)
 
     def change_system_prompt(self, prompt):
+        if self.config.get('companion_tools_enabled', False):
+            from core.providers.tools.server_mcp.companion_scope import COMPANION_HINT
+            if COMPANION_HINT not in prompt:
+                prompt += '\n' + COMPANION_HINT
         self.prompt = prompt
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)

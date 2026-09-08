@@ -1,0 +1,2 @@
+FROM xiaozhi-music-aipet:20260908-companion
+COPY cloud_bridge.py cloud_entry.py companion_tools.py /srv/music/

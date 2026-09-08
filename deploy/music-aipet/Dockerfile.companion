@@ -1,0 +1,2 @@
+FROM xiaozhi-music-aipet:20260908-web
+COPY server/ /srv/music/

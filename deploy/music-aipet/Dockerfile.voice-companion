@@ -1,0 +1,4 @@
+FROM xiaozhi-aipet-server:v0.9.6-b13
+COPY mcp_manager.py companion_scope.py /opt/xiaozhi-esp32-server/core/providers/tools/server_mcp/
+COPY connection.py /opt/xiaozhi-esp32-server/core/connection.py
+COPY config_loader.py /opt/xiaozhi-esp32-server/config/config_loader.py

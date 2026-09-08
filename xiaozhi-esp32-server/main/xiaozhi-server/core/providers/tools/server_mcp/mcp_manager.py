@@ -10,6 +10,7 @@ from mcp.types import LoggingMessageNotificationParams
 from config.config_loader import get_project_dir
 from config.logger import setup_logging
 from .mcp_client import ServerMCPClient
+from .companion_scope import bind_companion_scope
 
 TAG = __name__
 logger = setup_logging()
@@ -52,7 +53,7 @@ class ServerMCPManager:
         try:
             # 初始化服务端MCP客户端
             logger.bind(tag=TAG).info(f"初始化服务端MCP客户端: {name}")
-            client = ServerMCPClient(srv_config)
+            client = ServerMCPClient(bind_companion_scope(name, srv_config, self.conn))
             # 设置超时时间10秒
             await asyncio.wait_for(client.initialize(logging_callback=self.logging_callback), timeout=10)
 
@@ -114,7 +115,7 @@ class ServerMCPManager:
 
     async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """执行工具调用，失败时会尝试重新连接"""
-        logger.bind(tag=TAG).info(f"执行服务端MCP工具 {tool_name}，参数: {arguments}")
+        logger.bind(tag=TAG).info(f'执行服务端MCP工具 {tool_name}，参数字段数: {len(arguments)}')
 
         max_retries = 3  # 最大重试次数
         retry_interval = 2  # 重试间隔(秒)
@@ -155,7 +156,7 @@ class ServerMCPManager:
                     # 重新初始化客户端
                     config = self.load_config()
                     if client_name in config:
-                        client = ServerMCPClient(config[client_name])
+                        client = ServerMCPClient(bind_companion_scope(client_name, config[client_name], self.conn))
                         await client.initialize(logging_callback=self.logging_callback)
                         self.clients[client_name] = client
                         target_client = client

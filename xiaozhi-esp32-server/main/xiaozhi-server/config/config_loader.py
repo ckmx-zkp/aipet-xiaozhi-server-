@@ -92,6 +92,7 @@ async def get_config_from_api_async(config):
         config_data["memory_mcp"] = config["memory_mcp"]
     if config.get("console_device_sync"):
         config_data["console_device_sync"] = config["console_device_sync"]
+    config_data['companion_tools_enabled'] = bool(config.get('companion_tools_enabled', False))
     return config_data
 
 
