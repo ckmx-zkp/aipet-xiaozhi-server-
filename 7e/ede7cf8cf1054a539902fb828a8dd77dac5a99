@@ -1,0 +1,14 @@
+deploy/music-aipet/.gitignore
+  h_63bd3ffc12fa56 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "7eede7cf8cf1054a539902fb828a8dd77dac5a99",
+  "prompts": {},
+  "humans": {
+    "h_63bd3ffc12fa56": {
+      "author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
