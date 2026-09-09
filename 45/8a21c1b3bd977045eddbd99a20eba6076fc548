@@ -1,0 +1,37 @@
+deploy/model-validity/acceptance.py
+  s_031441294ae30b::t_1359af25c52036 43-44,51
+deploy/model-validity/smoke.py
+  s_031441294ae30b::t_090b2e01098ca8 1-33
+docs/08-部署配置基线与运维.md
+  s_031441294ae30b::t_5fba049a757537 136-145
+deploy/model-validity/production-results-20260909.json
+  s_031441294ae30b::t_5fba049a757537 1-662
+docs/13-模型有效性验收-20260909.md
+  s_031441294ae30b::t_5fba049a757537 3,13-17,23-39,57,59,61,83
+deploy/model-validity/production_validate.py
+  s_031441294ae30b::t_1359af25c52036 2-20
+  s_031441294ae30b::t_b20fdb2b405ad0 1,21-34
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/service/ModelValidityService.java
+  s_031441294ae30b::t_23fa94cb13a793 63-66,73,80,100,102-103
+deploy/model-validity/rollout.py
+  s_031441294ae30b::t_9a354bcbb36a38 1-5,7-18
+  s_031441294ae30b::t_5fba049a757537 6
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/dao/ModelConfigDao.java
+  s_031441294ae30b::t_23fa94cb13a793 15-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "458a21c1b3bd977045eddbd99a20eba6076fc548",
+  "prompts": {},
+  "sessions": {
+    "s_031441294ae30b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08567-a2e1-7b01-8424-ea695a85f38a",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
