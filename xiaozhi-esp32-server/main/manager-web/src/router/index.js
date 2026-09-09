@@ -70,6 +70,11 @@ const routes = [
     }
   },
   {
+    path: '/service-usage', name: 'ServiceUsage',
+    component: () => import('../views/ServiceUsage.vue'),
+    meta: { requiresAuth: true, title: '续费提醒' }
+  },
+  {
     path: '/model-config',
     name: 'ModelConfig',
     component: function () {
@@ -229,7 +234,7 @@ VueRouter.prototype.push = function push(location) {
 }
 
 // 需要登录才能访问的路由
-const protectedRoutes = ['home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig', 'KnowledgeBaseManagement', 'KnowledgeFileUpload', 'AddressBookManagement']
+const protectedRoutes = ['ServiceUsage', 'home', 'RoleConfig', 'DeviceManagement', 'UserManagement', 'ModelConfig', 'KnowledgeBaseManagement', 'KnowledgeFileUpload', 'AddressBookManagement']
 
 // 路由守卫
 router.beforeEach((to, from, next) => {

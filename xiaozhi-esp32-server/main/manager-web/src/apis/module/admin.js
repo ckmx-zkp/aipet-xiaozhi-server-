@@ -138,37 +138,15 @@ export default {
                 })
             }).send()
     },
-    // 获取ws服务端列表
-    getWsServerList(params, callback) {
+    // 服务管理请求不自动重试，避免重复发送重启指令。
+    getWsServerList(params, callback, failCallback = () => {}) {
         RequestService.sendRequest()
             .url(`${getServiceUrl()}/admin/server/server-list`)
-            .method('GET')
-            .success((res) => {
-                RequestService.clearRequestTime()
-                callback(res)
-            })
-            .networkFail((err) => {
-                console.error('获取ws服务端列表失败:', err)
-                RequestService.reAjaxFun(() => {
-                    this.getWsServerList(params, callback)
-                })
-            }).send();
+            .method('GET').success(callback).fail(failCallback).networkFail(failCallback).send();
     },
-    // 发送ws服务器动作指令
-    sendWsServerAction(data, callback) {
+    sendWsServerAction(data, callback, failCallback = () => {}) {
         RequestService.sendRequest()
             .url(`${getServiceUrl()}/admin/server/emit-action`)
-            .method('POST')
-            .data(data)
-            .success((res) => {
-                RequestService.clearRequestTime()
-                callback(res)
-            })
-            .networkFail((err) => {
-                RequestService.reAjaxFun(() => {
-                    this.sendWsServerAction(data, callback)
-                })
-            }).send();
+            .method('POST').data(data).success(callback).fail(failCallback).networkFail(failCallback).send();
     }
-
 }

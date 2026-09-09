@@ -78,30 +78,13 @@ export default {
         return `${getServiceUrl()}/voiceClone/play/${uuid}`;
     },
 
-    // 复刻音频
+    // 训练请求不得自动重试，防止重复消耗训练次数。
     cloneAudio(params, callback, errorCallback) {
-        RequestService.sendRequest()
-            .url(`${getServiceUrl()}/voiceClone/cloneAudio`)
-            .method('POST')
-            .data(params)
-            .success((res) => {
-                RequestService.clearRequestTime();
-                callback(res);
-            })
-            .fail((res) => {
-                // 业务失败回调
-                RequestService.clearRequestTime();
-                if (errorCallback) {
-                    errorCallback(res);
-                } else {
-                    callback(res);
-                }
-            })
-            .networkFail((err) => {
-                console.error('上传失败:', err);
-                RequestService.reAjaxFun(() => {
-                    this.cloneAudio(params, callback, errorCallback);
-                });
-            }).send();
+        RequestService.sendRequest().url(`${getServiceUrl()}/voiceClone/cloneAudio`).method('POST').data(params)
+            .success(callback).fail(errorCallback).networkFail(errorCallback).send();
+    },
+    refreshStatus(id, callback, errorCallback) {
+        RequestService.sendRequest().url(`${getServiceUrl()}/voiceClone/${encodeURIComponent(id)}/status`).method('POST')
+            .success(callback).fail(errorCallback).networkFail(errorCallback).send();
     }
 }

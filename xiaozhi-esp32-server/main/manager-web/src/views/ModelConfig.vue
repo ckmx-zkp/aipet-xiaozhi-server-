@@ -5,6 +5,7 @@
     <div class="operation-bar">
       <h2 class="page-title">{{ $t("modelConfig." + activeTab) }}</h2>
       <div class="action-group">
+        <RestartVoiceServiceButton />
         <div class="search-group">
           <el-input
             :placeholder="$t('modelConfig.searchPlaceholder')"
@@ -227,6 +228,7 @@
 
 <script>
 import Api from "@/apis/api";
+import RestartVoiceServiceButton from "@/components/RestartVoiceServiceButton.vue";
 import AddModelDialog from "@/components/AddModelDialog.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 import ModelEditDialog from "@/components/ModelEditDialog.vue";
@@ -235,7 +237,7 @@ import CustomPagination from "@/components/CustomPagination.vue";
 import CustomButton from "@/components/CustomButton.vue";
 import VersionFooter from "@/components/VersionFooter.vue";
 export default {
-  components: { HeaderBar, ModelEditDialog, TtsModel, AddModelDialog, VersionFooter, CustomPagination, CustomButton },
+  components: { RestartVoiceServiceButton, HeaderBar, ModelEditDialog, TtsModel, AddModelDialog, VersionFooter, CustomPagination, CustomButton },
   data() {
     return {
       checkingId: null,
@@ -544,7 +546,7 @@ export default {
     handleDefaultChange(model) {
       Api.model.setDefaultModel(model.id, ({ data }) => {
         if (data.code === 0) {
-          this.$message.success(this.$t("modelConfig.setDefaultSuccess"));
+          this.$message.success('默认模型已保存，可点击右上角“重启语音服务”应用配置');
           this.loadData();
         }
       });

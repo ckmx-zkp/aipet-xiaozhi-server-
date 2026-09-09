@@ -13,6 +13,7 @@
                 <CustomButton type="confirm" icon="el-icon-search" @click="handleSearch">{{ $t('voiceClone.search') }}</CustomButton>
               </div>
             </div>
+            <el-alert title="声音复刻2.0：先分配音色资源，再上传本人或已获授权的录音。训练会消耗次数；后付费自定义音色首次正式合成可能收取槽位费。这里不会自动合成或续费。" type="info" :closable="false" show-icon />
             <div v-loading="loading" class="voice-clone-grid">
               <div v-for="item in voiceCloneList" :key="item.id" class="voice-clone-card">
                 <div class="card-top">
@@ -59,18 +60,23 @@
                   </div>
                 </div>
 
+                <div style="padding: 0 16px; font-size: 12px; color: #606b7b">
+                  剩余训练次数：{{ item.remainingTrainingTimes == null ? '未查询' : item.remainingTrainingTimes }} · 查询时间：{{ item.quotaCheckedAt || '尚未查询' }}
+                  <div v-if="item.demoAudioUrl"><div>官方复刻试听（约一小时有效，过期请刷新状态）</div><audio controls preload="none" :src="item.demoAudioUrl" style="max-width: 100%" /></div>
+                </div>
                 <div class="card-actions">
                   <el-button v-if="item.hasVoice" size="mini" type="text" icon="el-icon-video-play"
                     @click="handlePlay(item)">
-                    {{ playingRowId === item.id ? $t('voiceClone.stop') : $t('voiceClone.play') }}
+                    {{ playingRowId === item.id ? '停止播放录音' : '播放原始录音' }}
                   </el-button>
                   <el-button size="mini" type="text" icon="el-icon-upload2" @click="handleUpload(item)">
                     {{ $t('voiceClone.upload') }}
                   </el-button>
                   <el-button v-if="item.hasVoice" size="mini" type="text" icon="el-icon-copy-document"
-                    @click="handleClone(item)" :loading="item._cloning">
-                    {{ $t('voiceClone.clone') }}
+                    @click="handleClone(item)" :loading="item._cloning" :disabled="item.trainStatus === 1 || item.remainingTrainingTimes === 0">
+                    复刻2.0
                   </el-button>
+                  <el-button size="mini" type="text" :loading="item._refreshing" @click="refreshCloneStatus(item)">查询状态 / 次数</el-button>
                   <el-button size="mini" type="text"
                     :icon="item.isEdit ? 'el-icon-check' : 'el-icon-edit'"
                     @click="handleEditButtonClick(item)">
@@ -228,18 +234,23 @@ export default {
       }
       return '';
     },
-    handleClone(row) {
+    refreshCloneStatus(row) {
+      if(row._refreshing)return;this.$set(row,'_refreshing',true);
+      Api.voiceClone.refreshStatus(row.id,({data})=>{this.$set(row,'_refreshing',false);if(data.code===0){this.$message.success('状态已更新');this.fetchVoiceCloneList();}else this.$message.error(data.msg || '查询失败');},()=>{this.$set(row,'_refreshing',false);this.$message.error('状态未能刷新，请稍后重试');});
+    },
+    async handleClone(row) {
       if (row._cloning) {
         return;
       }
+      try { await this.$confirm('将上传已保存的录音并消耗该音色训练次数。后付费自定义音色首次正式合成可能收取槽位费；本次只训练并获取试听。确认继续？', '确认声音复刻2.0', {type:'warning', confirmButtonText:'确认训练', cancelButtonText:'取消'}); } catch (_) { return; }
       this.$set(row, '_cloning', true);
-      const params = { cloneId: row.id };
+      const params = { cloneId: row.id, apiVersion: 'v3' };
       try {
         Api.voiceClone.cloneAudio(params, (res) => {
           try {
             res = res.data;
             if (res.code === 0) {
-              this.$message.success(this.$t('message.success'));
+              this.$message.success('请求已处理，请查看训练状态和剩余次数');
               this.fetchVoiceCloneList();
             } else {
               this.$message.error(res.msg || this.$t('message.error'));

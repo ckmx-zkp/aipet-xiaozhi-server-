@@ -43,6 +43,7 @@ import xiaozhi.modules.voiceclone.service.VoiceCloneService;
 public class VoiceCloneController {
 
     private final VoiceCloneService voiceCloneService;
+    private final xiaozhi.modules.voiceclone.service.VoiceCloneV3Service v3Service;
     private final RedisUtils redisUtils;
 
     @GetMapping
@@ -184,8 +185,16 @@ public class VoiceCloneController {
         String cloneId = params.get("cloneId");
         checkPermission(cloneId);
         // 调用服务层进行语音克隆训练
-        voiceCloneService.cloneAudio(cloneId);
+        if ("v3".equals(params.get("apiVersion"))) v3Service.train(cloneId);
+        else voiceCloneService.cloneAudio(cloneId);
         return new Result<String>();
+    }
+
+    @PostMapping("/{id}/status")
+    @RequiresPermissions("sys:role:normal")
+    public Result<Map<String,Object>> refreshStatus(@PathVariable String id) {
+        if (!Integer.valueOf(1).equals(SecurityUser.getUser().getSuperAdmin())) checkPermission(id);
+        return new Result<Map<String,Object>>().ok(v3Service.refresh(id));
     }
 
     private void checkPermission(String id) {

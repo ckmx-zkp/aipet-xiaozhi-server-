@@ -22,6 +22,15 @@ function retryCallbackRequest(retry, retryCount, onTerminalFailure, error, retry
 }
 
 export default {
+    getServiceUsage(callback, failCallback) {
+        RequestService.sendRequest().url(`${getServiceUrl()}/models/usage`).method('GET')
+            .success(callback).fail(failCallback).networkFail(failCallback).send();
+    },
+    saveServiceReminder(key, data, callback, failCallback) {
+        RequestService.sendRequest().url(`${getServiceUrl()}/models/usage/reminder/${encodeURIComponent(key)}`).method('PUT').data(data)
+            .success(callback).fail(failCallback).networkFail(failCallback).send();
+    },
+
   // 检测会产生真实最小请求，失败不自动重放。
   validateModel(id, callback, onFailure) {
     RequestService.sendRequest()

@@ -111,16 +111,26 @@ WEATHER_CODE_MAP = {
 }
 
 
+class WeatherServiceError(Exception):
+    """天气服务错误，向用户返回固定分类，不泄露凭证。"""
+
+
 async def fetch_city_info(location, api_key, api_host):
-    url = f"https://{api_host}/geo/v2/city/lookup?key={api_key}&location={location}&lang=zh"
-    async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
-        response = await client.get(url, headers=HEADERS)
-    data = response.json()
-    if data.get("error") is not None:
-        logger.bind(tag=TAG).error(
-            f"获取天气失败，原因：{data.get('error', {}).get('detail')}"
-        )
-        return None
+    if not api_key or not api_host:
+        raise WeatherServiceError("天气服务尚未配置有效凭证，请管理员配置和风天气 API Host 和 API Key。")
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=3.0)) as client:
+            response = await client.get(f"https://{api_host}/geo/v2/city/lookup", params={"location": location, "lang": "zh"}, headers={**HEADERS, "X-QW-Api-Key": api_key})
+        data = response.json()
+    except (httpx.HTTPError, ValueError):
+        raise WeatherServiceError("天气服务暂时无法连接，请稍后再试。") from None
+    code = str(data.get("code", response.status_code))
+    if response.status_code in (401, 403) or code in ("401", "403"):
+        raise WeatherServiceError("天气服务鉴权失败，请管理员检查和风天气凭证及权限；这不是城市名称错误。")
+    if response.status_code == 429 or code == "429":
+        raise WeatherServiceError("天气服务请求额度或频率受限，请管理员检查配额。")
+    if response.status_code >= 400 or code not in ("200", "404") or data.get("error"):
+        raise WeatherServiceError("天气供应商请求失败，请管理员检查服务状态。")
     return data.get("location", [])[0] if data.get("location") else None
 
 
@@ -166,8 +176,8 @@ async def get_weather(conn: "ConnectionHandler", location: str = None, lang: str
     from core.utils.cache.manager import cache_manager, CacheType
 
     weather_config = conn.config.get("plugins", {}).get("get_weather", {})
-    api_host = weather_config.get("api_host", "mj7p3y7naa.re.qweatherapi.com")
-    api_key = weather_config.get("api_key", "a861d0d5e7bf4ee1a83d9a9e4f96d4da")
+    api_host = weather_config.get("api_host", "")
+    api_key = weather_config.get("api_key", "")
     default_location = weather_config.get("default_location", "广州")
     client_ip = conn.client_ip
 
@@ -198,7 +208,10 @@ async def get_weather(conn: "ConnectionHandler", location: str = None, lang: str
         return ActionResponse(Action.REQLLM, cached_weather_report, None)
 
     # 缓存未命中，获取实时天气数据
-    city_info = await fetch_city_info(location, api_key, api_host)
+    try:
+        city_info = await fetch_city_info(location, api_key, api_host)
+    except WeatherServiceError as exc:
+        return ActionResponse(Action.REQLLM, str(exc), None)
     if not city_info:
         return ActionResponse(
             Action.REQLLM, f"未找到相关的城市: {location}，请确认地点是否正确", None

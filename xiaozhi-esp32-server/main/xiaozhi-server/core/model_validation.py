@@ -10,6 +10,8 @@ import struct
 import sys
 import uuid
 import wave
+import re
+import secrets
 
 def sample_path():
     bundled = Path(__file__).with_name("model_validation_sample.wav")
@@ -169,18 +171,26 @@ async def probe(kind, c):
         if provider in {"ollama", "xinference"} and not url.rstrip("/").endswith("/v1"):
             url = url.rstrip("/") + "/v1"
         messages = [{"role": "user", "content": "Reply with OK only."}]
+        expected_colors = []
         if kind == "vllm":
             import zlib
+            palette = {"red": b"\xff\0\0", "green": b"\0\xff\0", "blue": b"\0\0\xff", "yellow": b"\xff\xff\0"}
+            expected_colors = secrets.SystemRandom().sample(list(palette), 2)
             def chunk(t, d):
                 return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t+d)&0xffffffff)
-            png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 16, 16, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress((b"\0" + b"\xff\0\0"*16)*16)) + chunk(b"IEND", b"")
-            messages[0]["content"] = [{"type": "text", "text": "What color is this image?"}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,"+base64.b64encode(png).decode()}}]
+            row = b"\0" + palette[expected_colors[0]]*32 + palette[expected_colors[1]]*32
+            png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 64, 32, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(row*32)) + chunk(b"IEND", b"")
+            messages[0]["content"] = [{"type": "text", "text": "Name the solid colors of the left and right halves of this image, left first. Reply only two English color words separated by comma."}, {"type": "image_url", "image_url": {"url": "data:image/png;base64,"+base64.b64encode(png).decode()}}]
         extra = {"thinking": {"type": "disabled"}} if "minimax" in str(url).lower() else {}
         async with AsyncOpenAI(api_key=key, base_url=url, timeout=18, max_retries=0) as client:
-            result = await client.chat.completions.create(model=c.get("model_name"), messages=messages, max_tokens=128, extra_body=extra)
+            result = await client.chat.completions.create(model=c.get("model_name"), messages=messages, max_tokens=512 if kind == "vllm" else 128, extra_body=extra)
         if not result.choices or not (result.choices[0].message.content or "").strip():
             fail("模型未返回可用内容", "unknown")
-        return "图片识别请求成功" if kind == "vllm" else "最小对话请求成功"
+        if kind == "vllm":
+            answer = re.sub(r"<think>.*?(?:</think>|$)", "", result.choices[0].message.content, flags=re.S).lower()
+            if re.findall(r"\b(red|green|blue|yellow)\b", answer) != expected_colors:
+                fail("图片内容核验未通过：返回文字不代表模型具备图片理解能力", "unknown")
+        return "图片左右色块识别正确" if kind == "vllm" else "最小对话请求成功"
     if kind == "tts" and provider == "huoshan_double_stream":
         await huoshan_audio(c)
         return "火山 TTS 已返回真实音频"

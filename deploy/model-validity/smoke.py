@@ -1,14 +1,14 @@
 """发布后 OTA、WebSocket hello 及静态资源校验；不打印设备和凭据。"""
-import json,subprocess,urllib.request,hashlib,re
+import json,subprocess,urllib.request,hashlib,re,os
 from pathlib import Path
 from production_validate import sql
 stage=Path('/opt/aipet-model-validation-20260909')
 html=urllib.request.urlopen('http://127.0.0.1:8002/',timeout=10).read()
-assert hashlib.sha256(html).digest()==hashlib.sha256((stage/'dist/index.html').read_bytes()).digest()
+assert hashlib.sha256(html).digest()==hashlib.sha256((stage/os.environ.get('STATIC_DIST','dist')/'index.html').read_bytes()).digest()
 assets=set(re.findall(r'(?:src|href)=["\'](/(?:js|css)/[^"\']+)["\']',html.decode()))
 for asset in assets:
  data=urllib.request.urlopen('http://127.0.0.1:8002'+asset,timeout=15).read()
- assert data==(stage/'dist'/asset.lstrip('/')).read_bytes()
+ assert data==(stage/os.environ.get('STATIC_DIST','dist')/asset.lstrip('/')).read_bytes()
 print('PASS frontend index and %d asset hashes'%len(assets))
 device=json.loads(sql("SELECT JSON_OBJECT('mac',mac_address,'board',board,'version',app_version) FROM ai_device WHERE agent_id IS NOT NULL ORDER BY last_connected_at DESC LIMIT 1"))
 code=r"""

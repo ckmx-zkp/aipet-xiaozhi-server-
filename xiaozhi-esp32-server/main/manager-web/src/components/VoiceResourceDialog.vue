@@ -9,6 +9,7 @@
     @cancel="handleCancel"
     @confirm="handleSubmit"
   >
+    <el-alert title="可填写已购买的 S_ 音色ID，或符合火山规则的后付费自定义ID。添加到此列表不会购买或训练；后付费音色首次正式合成可能产生槽位费。" type="info" :closable="false" />
     <el-form ref="form" :model="form" :rules="rules" label-width="auto">
       <el-form-item :label="$t('voiceClone.platformName')" prop="modelId">
         <el-select v-model="form.modelId" :placeholder="$t('voiceClone.platformNamePlaceholder')" filterable

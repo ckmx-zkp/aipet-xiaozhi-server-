@@ -26,6 +26,7 @@
                                 {{ formatDate(scope.row.createDate) }}
                             </template>
                             <template slot="operations" slot-scope="scope">
+                                <el-button size="mini" type="text" :loading="scope.row._refreshing" @click="refreshStatus(scope.row)">查询状态 / 次数</el-button>
                                 <el-button size="mini" type="text"
                                     @click="deleteVoiceClone(scope.row)">{{ $t('voiceClone.delete') }}</el-button>
                             </template>
@@ -94,6 +95,10 @@ export default {
         this.fetchVoiceCloneList();
     },
     methods: {
+        refreshStatus(row) {
+            if(row._refreshing)return;this.$set(row,'_refreshing',true);
+            Api.voiceClone.refreshStatus(row.id,({data})=>{this.$set(row,'_refreshing',false);if(data.code===0){this.$message.success('已更新');this.fetchVoiceCloneList();}else this.$message.error(data.msg || '查询失败');},()=>{this.$set(row,'_refreshing',false);this.$message.error('查询未完成，请稍后重试');});
+        },
         initTableColumns() {
             this.tableColumns = [
                 { prop: 'voiceId', label: this.$t('voiceClone.voiceId'), align: 'center' },
@@ -101,6 +106,8 @@ export default {
                 { prop: 'userName', label: this.$t('voiceClone.userId'), align: 'center' },
                 { prop: 'modelName', label: this.$t('voiceClone.platformName'), align: 'center' },
                 { prop: 'languages', label: this.$t('voiceClone.languages'), align: 'center' },
+                { prop: 'remainingTrainingTimes', label: '剩余训练次数', align: 'center' },
+                { prop: 'quotaCheckedAt', label: '查询时间', align: 'center' },
                 { prop: 'trainStatus', label: this.$t('voiceClone.trainStatus'), align: 'center' },
                 { prop: 'createdAt', label: this.$t('voiceClone.createdAt'), align: 'center' }
             ];

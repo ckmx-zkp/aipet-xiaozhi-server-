@@ -90,7 +90,7 @@ public class VoiceCloneServiceImpl extends BaseServiceImpl<VoiceCloneDao, VoiceC
                 continue;
             }
             if (Constant.VOICE_CLONE_HUOSHAN_DOUBLE_STREAM.equals(type)) {
-                if (voiceId.indexOf("S_") == -1) {
+                if (!xiaozhi.modules.voiceclone.service.VoiceCloneV3Service.validSpeaker(voiceId)) {
                     throw new RenException(ErrorCode.VOICE_CLONE_HUOSHAN_VOICE_ID_ERROR);
                 }
             }

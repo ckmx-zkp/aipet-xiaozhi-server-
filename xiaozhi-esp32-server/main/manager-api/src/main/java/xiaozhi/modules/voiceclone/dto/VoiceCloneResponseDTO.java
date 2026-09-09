@@ -48,4 +48,11 @@ public class VoiceCloneResponseDTO {
 
     @Schema(description = "是否有音频数据")
     private Boolean hasVoice;
+    @Schema(description = "官方剩余训练次数，未查询时为空")
+    private Integer remainingTrainingTimes;
+    @Schema(description = "官方训练状态，2/4可用")
+    private Integer providerStatus;
+    private Date quotaCheckedAt;
+    @Schema(description = "官方临时试听地址，约一小时有效")
+    private String demoAudioUrl;
 }

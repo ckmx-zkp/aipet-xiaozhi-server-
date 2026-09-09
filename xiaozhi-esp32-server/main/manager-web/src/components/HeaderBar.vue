@@ -66,14 +66,16 @@
           </el-dropdown-menu>
         </el-dropdown>
 
-        <div v-if="userInfo.superAdmin" class="equipment-management"
-          :class="{ 'active-tab': $route.path === '/model-config' }" @click="handleRouter('modelConfig')">
-          <img loading="lazy" alt="" src="@/assets/header/model_config.png" :style="{
-            filter:
-              $route.path === '/model-config' ? 'brightness(0) invert(1)' : 'None',
-          }" />
-          <span class="nav-text">{{ $t("header.modelConfig") }}</span>
-        </div>
+        <el-dropdown v-if="userInfo.superAdmin" trigger="click" class="equipment-management" :class="{ 'active-tab': ['/model-config', '/service-usage'].includes($route.path) }">
+          <span class="el-dropdown-link">
+            <img loading="lazy" alt="" src="@/assets/header/model_config.png" :style="{ filter: ['/model-config', '/service-usage'].includes($route.path) ? 'brightness(0) invert(1)' : 'none' }" />
+            <span class="nav-text">{{ $t('header.modelConfig') }}</span><i class="el-icon-arrow-down"></i>
+          </span>
+          <el-dropdown-menu slot="dropdown">
+            <el-dropdown-item @click.native="handleRouter('modelConfig')">模型配置</el-dropdown-item>
+            <el-dropdown-item @click.native="$router.push('/service-usage')">续费提醒</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
         <div v-if="featureStatus.knowledgeBase" class="equipment-management"
           :class="{ 'active-tab': $route.path === '/knowledge-base-management' || $route.path === '/knowledge-file-upload' }"
           @click="handleRouter('knowledgeBaseManagement')">

@@ -21,4 +21,21 @@ class Tests(unittest.TestCase):
   with wave.open(str(p.with_name('model_validation_sample.wav')),'rb') as f:
    self.assertEqual((f.getnchannels(),f.getsampwidth(),f.getframerate()),(1,2,16000))
    self.assertGreater(f.getnframes(),1000)
+class VisionTests(unittest.IsolatedAsyncioTestCase):
+ async def check_answer(self, answer):
+  from unittest.mock import patch
+  from types import SimpleNamespace
+  class Client:
+   def __init__(self, **kwargs):self.chat=SimpleNamespace(completions=self)
+   async def __aenter__(self):return self
+   async def __aexit__(self,*args):pass
+   async def create(self, **kwargs):return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=answer))])
+  with patch.dict('sys.modules',{'openai':SimpleNamespace(AsyncOpenAI=Client)}), patch.object(m.secrets,'SystemRandom') as random:
+   random.return_value.sample.return_value=['blue','yellow']
+   return await m.probe('vllm',{'type':'openai','model_name':'test','base_url':'https://example.invalid/v1','api_key':'test'})
+ async def test_correct_pixels_required(self):
+  self.assertIn('识别正确',await self.check_answer('Blue, yellow'))
+ async def test_text_or_reasoning_is_not_visual_success(self):
+  for answer in ['I cannot see images','Red, green','<think>blue,yellow</think>']:
+   with self.assertRaises(m.ProbeFailure):await self.check_answer(answer)
 if __name__=='__main__': unittest.main()

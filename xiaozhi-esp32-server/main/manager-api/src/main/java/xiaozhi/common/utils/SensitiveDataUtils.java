@@ -17,7 +17,7 @@ public class SensitiveDataUtils {
 
     // 敏感字段列表
     private static final Set<String> SENSITIVE_FIELDS = new HashSet<>(Arrays.asList(
-            "api_key", "personal_access_token", "access_token", "token",
+            "api_key", "voice_clone_api_key", "personal_access_token", "access_token", "token",
             "secret", "access_key_secret", "secret_key"));
 
     /**
