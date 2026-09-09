@@ -60,22 +60,24 @@ public class ModelValidityService {
     }
 
     public ModelConfigEntity validate(String id) {
-        ModelConfigEntity original = dao.selectById(id);
-        if (original == null) throw new RenException("模型配置不存在");
+        Map<String, Object> snapshot = dao.getValidationSnapshot(id);
+        if (snapshot == null) throw new RenException("模型配置不存在");
+        String modelType = (String) snapshot.get("modelType");
+        String rawConfig = (String) snapshot.get("configJsonRaw");
         String secret = params.getValue("server.secret", true);
         if (secret == null || secret.isBlank()) throw new RenException("检测服务尚未配置认证");
         String status;
         String reason;
         try {
             Map<String, Object> probeConfig = new java.util.HashMap<>();
-            if (original.getConfigJson() != null) probeConfig.putAll(original.getConfigJson());
+            if (rawConfig != null) probeConfig.putAll(mapper.readValue(rawConfig, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}));
             probeConfig.remove("_validation_dependency");
             String dependencyId = String.valueOf(probeConfig.getOrDefault("llm", ""));
             if (!dependencyId.isBlank()) {
                 ModelConfigEntity dependency = dao.selectById(dependencyId);
                 probeConfig.put("_validation_dependency", Map.of("status", dependency == null || dependency.getValidityStatus() == null ? "unknown" : dependency.getValidityStatus()));
             }
-            String payload = mapper.writeValueAsString(Map.of("modelType", original.getModelType(), "config", probeConfig));
+            String payload = mapper.writeValueAsString(Map.of("modelType", modelType, "config", probeConfig));
             HttpRequest request = HttpRequest.newBuilder(URI.create(probeUrl))
                     .timeout(Duration.ofSeconds(28)).header("Content-Type", "application/json")
                     .header("X-Server-Secret", secret).POST(HttpRequest.BodyPublishers.ofString(payload)).build();
@@ -95,10 +97,10 @@ public class ModelValidityService {
         }
         // 乐观条件保证检测期间修改过配置时，旧结果不能覆盖新配置。
         UpdateWrapper<ModelConfigEntity> update = new UpdateWrapper<ModelConfigEntity>().eq("id", id)
-                .eq("model_type", original.getModelType())
+                .eq("model_type", modelType)
                 .set("validity_status", status).set("validity_reason", reason).set("validity_checked_at", new Date());
-        if (original.getConfigJson() == null) update.isNull("config_json");
-        else update.apply("config_json = CAST({0} AS JSON)", original.getConfigJson().toString());
+        if (rawConfig == null) update.isNull("config_json");
+        else update.apply("config_json = CAST({0} AS JSON)", rawConfig);
         if (!"valid".equals(status)) update.set("is_enabled", 0).set("is_default", 0);
         if (dao.update(null, update) != 1) throw new RenException("检测期间配置已改变，请重新检测");
         clearCache(id);

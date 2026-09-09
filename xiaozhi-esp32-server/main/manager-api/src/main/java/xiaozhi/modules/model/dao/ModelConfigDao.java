@@ -12,6 +12,10 @@ import xiaozhi.modules.model.entity.ModelConfigEntity;
 @Mapper
 public interface ModelConfigDao extends BaseDao<ModelConfigEntity> {
 
+    // 原始 JSON 保留显式 null，供能力探测与乐观更新共用同一快照。
+    @org.apache.ibatis.annotations.Select("SELECT model_type AS modelType, CAST(config_json AS CHAR) AS configJsonRaw FROM ai_model_config WHERE id = #{id}")
+    Map<String, Object> getValidationSnapshot(@Param("id") String id);
+
     /**
      * get model_code list
      */

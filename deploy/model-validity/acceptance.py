@@ -40,13 +40,15 @@ if __name__=='__main__':
   r=api('/models/'+missing+'/validate','POST',token=token)
   check(r.get('code')==0 and r['data']['validityStatus']=='invalid' and r['data']['isEnabled']==0,'missing credentials invalid and disabled')
   check(api('/models/enable/'+missing+'/1','PUT',token=token).get('code')!=0,'invalid enable rejected')
+  r=api('/models/TTS_FishSpeech/validate','POST',token=token)
+  check(r.get('code')==0 and r['data']['validityStatus']=='invalid','explicit JSON null snapshot round trip')
   row=api('/models/VAD_SileroVAD',token=token)['data']
   row['modelName']=row['modelName']+' acceptance'
   provider=sql("SELECT provider_code FROM ai_model_provider WHERE model_type='VAD' LIMIT 1")
   route='/models/VAD/'+provider+'/VAD_SileroVAD'
   r=api(route,'PUT',row,token)
   check(r.get('code')==0 and r['data']['validityStatus']=='valid','name edit preserves validity')
-  row['configJson']['acceptance_revision']=1
+  row['configJson']['acceptance_revision']=secrets.token_hex(8)
   r=api(route,'PUT',row,token)
   check(r.get('code')==0 and r['data']['validityStatus']=='unknown' and r['data']['isEnabled']==0 and r['data']['isDefault']==0,'config edit invalidates and disables')
   normal=sql('SELECT id FROM sys_user WHERE super_admin=0 LIMIT 1')
