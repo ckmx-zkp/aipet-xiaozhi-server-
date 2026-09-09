@@ -95,45 +95,28 @@
                   {{ scope.row.configJson.type || $t("modelConfig.unknown") }}
                 </template>
               </el-table-column>
+              <el-table-column label="是否有效" align="center" min-width="165">
+                <template slot-scope="scope">
+                  <el-tooltip :content="scope.row.validityReason || '尚未验证'" placement="top" effect="light">
+                    <el-tag :type="validityTag(scope.row)">{{ validityLabel(scope.row) }}</el-tag>
+                  </el-tooltip>
+                  <div class="validity-time" v-if="scope.row.validityCheckedAt">{{ validityTime(scope.row.validityCheckedAt) }}</div>
+                  <el-button type="text" size="mini" :loading="checkingId === scope.row.id"
+                    :disabled="!!checkingId && checkingId !== scope.row.id" @click="validateModel(scope.row)">检测</el-button>
+                </template>
+              </el-table-column>
               <el-table-column :label="$t('modelConfig.isEnabled')" align="center">
                 <template slot-scope="scope">
-                  <el-tooltip
-                    v-if="scope.row.isDefault === 1 && scope.row.isEnabled === 1"
-                    :content="$t('modelConfig.defaultModelCannotDisable')"
-                    placement="top"
-                    effect="light"
-                  > 
-                    <el-switch
-                      v-model="scope.row.isEnabled"
-                      active-color="#5778ff"
-                      inactive-color="#DCDFE6"
-                      :active-value="1"
-                      :inactive-value="0"
-                      disabled
-                      @change="handleStatusChange(scope.row)"
-                    />
-                  </el-tooltip>
-                  <el-switch
-                    v-else
-                    v-model="scope.row.isEnabled"
-                    active-color="#5778ff"
-                    inactive-color="#DCDFE6"
-                    :active-value="1"
-                    :inactive-value="0"
-                    @change="handleStatusChange(scope.row)"
-                  />
+                  <el-switch :value="scope.row.isEnabled" :active-value="1" :inactive-value="0"
+                    :disabled="scope.row.isEnabled !== 1 && scope.row.validityStatus !== 'valid'"
+                    @change="handleStatusChange(scope.row, $event)" />
                 </template>
               </el-table-column>
               <el-table-column :label="$t('modelConfig.isDefault')" align="center">
                 <template slot-scope="scope">
-                  <el-switch
-                    v-model="scope.row.isDefault"
-                    active-color="#5778ff"
-                    inactive-color="#DCDFE6"
-                    :active-value="1"
-                    :inactive-value="0"
-                    @change="handleDefaultChange(scope.row)"
-                  />
+                  <el-switch :value="scope.row.isDefault" :active-value="1" :inactive-value="0"
+                    :disabled="scope.row.validityStatus !== 'valid' || scope.row.isDefault === 1"
+                    @change="handleDefaultChange(scope.row)" />
                 </template>
               </el-table-column>
               <el-table-column
@@ -255,6 +238,7 @@ export default {
   components: { HeaderBar, ModelEditDialog, TtsModel, AddModelDialog, VersionFooter, CustomPagination, CustomButton },
   data() {
     return {
+      checkingId: null,
       addDialogVisible: false,
       activeTab: "llm",
       search: "",
@@ -522,28 +506,38 @@ export default {
         }
       });
     },
-    // 处理启用/禁用状态变更
-    handleStatusChange(model) {
-      const newStatus = model.isEnabled ? 1 : 0;
-      const originalStatus = model.isEnabled;
-
-      model.isEnabled = !model.isEnabled;
-
-      Api.model.updateModelStatus(model.id, newStatus, ({ data }) => {
+    validityLabel(model) {
+      return { valid: '有效', invalid: '无效', unknown: '待验证' }[model.validityStatus] || '待验证';
+    },
+    validityTag(model) {
+      return { valid: 'success', invalid: 'danger', unknown: 'info' }[model.validityStatus] || 'info';
+    },
+    validityTime(value) {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', { hour12: false });
+    },
+    validateModel(model) {
+      this.checkingId = model.id;
+      Api.model.validateModel(model.id, ({ data }) => {
+        this.checkingId = null;
         if (data.code === 0) {
-          this.$message.success(
-            newStatus === 1
-              ? this.$t("modelConfig.enableSuccess")
-              : this.$t("modelConfig.disableSuccess")
-          );
-          // 保持新状态
-          model.isEnabled = newStatus;
-          // 刷新表格数据
+          this.$message({ type: data.data.validityStatus === 'valid' ? 'success' : 'warning',
+            message: data.data.validityReason || '检测完成' });
           this.loadData();
         } else {
-          // 操作失败时恢复原状态
-          model.isEnabled = originalStatus;
-          this.$message.error(data.msg || this.$t("modelConfig.operationFailed"));
+          this.$message.error(data.msg || '检测失败');
+        }
+      }, (error) => {
+        this.checkingId = null;
+        this.$message.error(error?.data?.msg || '检测未完成，请稍后重试');
+      });
+    },
+    handleStatusChange(model, newStatus) {
+      if (newStatus === 1 && model.validityStatus !== 'valid') return;
+      Api.model.updateModelStatus(model.id, newStatus, ({ data }) => {
+        if (data.code === 0) {
+          this.$message.success(newStatus === 1 ? '已启用' : '已停用');
+          this.loadData();
         }
       });
     },
@@ -560,6 +554,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.validity-time { font-size: 11px; color: #667085; line-height: 1.5; margin-top: 4px; }
 .el-switch {
   height: 23px;
 }

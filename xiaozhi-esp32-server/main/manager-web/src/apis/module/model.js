@@ -22,6 +22,16 @@ function retryCallbackRequest(retry, retryCount, onTerminalFailure, error, retry
 }
 
 export default {
+  // 检测会产生真实最小请求，失败不自动重放。
+  validateModel(id, callback, onFailure) {
+    RequestService.sendRequest()
+      .url(`${getServiceUrl()}/models/${id}/validate`)
+      .method('POST')
+      .success(callback)
+      .fail(onFailure)
+      .networkFail(onFailure)
+      .send();
+  },
   // 获取模型配置列表
   getModelList(params, callback) {
     const queryParams = new URLSearchParams({

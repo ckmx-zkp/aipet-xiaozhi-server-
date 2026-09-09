@@ -1,0 +1,596 @@
+[
+  {
+    "id": "ASR_AliyunASR",
+    "name": "阿里云语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appkey"
+  },
+  {
+    "id": "ASR_AliyunBLStream",
+    "name": "阿里百炼Paraformer实时语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_AliyunStreamASR",
+    "name": "阿里云语音识别(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appkey"
+  },
+  {
+    "id": "ASR_BaiduASR",
+    "name": "百度语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_DoubaoASR",
+    "name": "豆包语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "ASR_DoubaoStreamASR",
+    "name": "豆包语音识别(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "ASR_GroqASR",
+    "name": "Groq语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_OpenaiASR",
+    "name": "OpenAI语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_Qwen3Flash",
+    "name": "Qwen3Flash语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_TencentASR",
+    "name": "腾讯语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appid"
+  },
+  {
+    "id": "ASR_VoskASR",
+    "name": "VOSK离线语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位配置：model_path"
+  },
+  {
+    "id": "ASR_XunfeiStream",
+    "name": "讯飞语音识别(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "Intent_function_call",
+    "name": "大模型自主函数调用",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Intent",
+    "status": "valid",
+    "reason": "内置模块可加载（不需要外部 API）"
+  },
+  {
+    "id": "Intent_nointent",
+    "name": "无意图识别",
+    "default": 1,
+    "enabled": 0,
+    "modelType": "Intent",
+    "status": "valid",
+    "reason": "内置模块可加载（不需要外部 API）"
+  },
+  {
+    "id": "LLM_AliLLM",
+    "name": "通义千问",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_CozeLLM",
+    "name": "Coze",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：personal_access_token"
+  },
+  {
+    "id": "LLM_DeepSeekLLM",
+    "name": "DeepSeek",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_DifyLLM",
+    "name": "Dify",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_DoubaoLLM",
+    "name": "豆包大模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_FastgptLLM",
+    "name": "FastGPT",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_GeminiLLM",
+    "name": "谷歌Gemini",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_KimiK27",
+    "name": "Kimi K2.7(å¤‡ç”¨)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "供应商拒绝鉴权或资源权限（401/403）"
+  },
+  {
+    "id": "LLM_MiniMaxM25",
+    "name": "MiniMax M2.5",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "valid",
+    "reason": "最小对话请求成功"
+  },
+  {
+    "id": "LLM_QianfanCodingLLM",
+    "name": "Qianfan Coding",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "供应商拒绝鉴权或资源权限（401/403）"
+  },
+  {
+    "id": "LLM_VolcesAiGatewayLLM",
+    "name": "火山引擎边缘大模型网关",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "LLM_XunfeiSparkLLM",
+    "name": "讯飞星火认知大模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_password"
+  },
+  {
+    "id": "Memory_mem_report_only",
+    "name": "仅上报聊天记录（不总结记忆）",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Memory",
+    "status": "valid",
+    "reason": "内置模块可加载（不需要外部 API）"
+  },
+  {
+    "id": "Memory_mem0ai",
+    "name": "Mem0AI记忆",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Memory",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "Memory_nomem",
+    "name": "无记忆",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "Memory",
+    "status": "valid",
+    "reason": "内置模块可加载（不需要外部 API）"
+  },
+  {
+    "id": "Memory_powermem",
+    "name": "PowerMem记忆",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Memory",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：llm_api_key"
+  },
+  {
+    "id": "RAG_RAGFlow",
+    "name": "RAGFlow",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "RAG",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "TTS_AliBLStreamTTS",
+    "name": "阿里百炼(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appkey"
+  },
+  {
+    "id": "TTS_AliyunStreamTTS",
+    "name": "阿里云(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appkey"
+  },
+  {
+    "id": "TTS_AliyunTTS",
+    "name": "阿里云语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appkey"
+  },
+  {
+    "id": "TTS_CosyVoiceSiliconflow",
+    "name": "硅基流动语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "TTS_CozeCnTTS",
+    "name": "Coze中文语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "TTS_DoubaoTTS",
+    "name": "豆包语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "TTS_EdgeTTS",
+    "name": "Edge语音合成",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "valid",
+    "reason": "Edge TTS 已返回真实音频"
+  },
+  {
+    "id": "TTS_FishSpeech",
+    "name": "FishSpeech语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "TTS_HSDSTTS_V2",
+    "name": "豆包语音合成2.0(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "TTS_MinimaxStreamTTS",
+    "name": "Minimax(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "TTS_OpenAITTS",
+    "name": "OpenAI语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "TTS_TencentTTS",
+    "name": "腾讯语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：appid"
+  },
+  {
+    "id": "TTS_TTS302AI",
+    "name": "302AI语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：access_token"
+  },
+  {
+    "id": "TTS_VolcesAiGatewayTTS",
+    "name": "火山引擎边缘大模型网关",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "TTS_XunFeiStreamTTS",
+    "name": "科大讯飞(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "VAD_SileroVAD",
+    "name": "语音活动检测",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "VAD",
+    "status": "valid",
+    "reason": "本地 VAD 推理成功"
+  },
+  {
+    "id": "VLLM_ChatGLMVLLM",
+    "name": "智谱视觉AI",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "VLLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "VLLM_QwenVLVLLM",
+    "name": "千问视觉模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "VLLM",
+    "status": "invalid",
+    "reason": "缺少或仍为占位凭据：api_key"
+  },
+  {
+    "id": "ASR_DoubaoStreamASRV2",
+    "name": "豆包语音识别2.0(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "valid",
+    "reason": "火山 ASR 已识别合成测试语音"
+  },
+  {
+    "id": "ASR_FunASR",
+    "name": "FunASR语音识别",
+    "default": 1,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "valid",
+    "reason": "本地 ASR 已执行样本识别"
+  },
+  {
+    "id": "TTS_HuoshanDoubleStreamTTS",
+    "name": "火山引擎(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "valid",
+    "reason": "火山 TTS 已返回真实音频"
+  },
+  {
+    "id": "ASR_FunASRServer",
+    "name": "FunASR服务语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "unknown",
+    "reason": "请求未完成（ConnectionRefusedError），请检查网络或供应商状态"
+  },
+  {
+    "id": "ASR_SherpaASR",
+    "name": "Sherpa语音识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "ASR",
+    "status": "invalid",
+    "reason": "Sherpa 本地模型目录不存在"
+  },
+  {
+    "id": "Intent_intent_llm",
+    "name": "外挂的大模型意图识别",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Intent",
+    "status": "unknown",
+    "reason": "所依赖的大模型无效或尚未验证"
+  },
+  {
+    "id": "LLM_ChatGLMLLM",
+    "name": "智谱AI",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "unknown",
+    "reason": "请求未完成（APITimeoutError），请检查网络或供应商状态"
+  },
+  {
+    "id": "LLM_LMStudioLLM",
+    "name": "LM Studio",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "unknown",
+    "reason": "请求未完成（APIConnectionError），请检查网络或供应商状态"
+  },
+  {
+    "id": "LLM_OllamaLLM",
+    "name": "Ollama本地模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "unknown",
+    "reason": "请求未完成（APIConnectionError），请检查网络或供应商状态"
+  },
+  {
+    "id": "LLM_XinferenceLLM",
+    "name": "Xinference大模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "unknown",
+    "reason": "请求未完成（APIConnectionError），请检查网络或供应商状态"
+  },
+  {
+    "id": "LLM_XinferenceSmallLLM",
+    "name": "Xinference小模型",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "LLM",
+    "status": "unknown",
+    "reason": "请求未完成（APIConnectionError），请检查网络或供应商状态"
+  },
+  {
+    "id": "Memory_mem_local_short",
+    "name": "本地短期记忆（总结记忆）",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "Memory",
+    "status": "unknown",
+    "reason": "所依赖的大模型无效或尚未验证"
+  },
+  {
+    "id": "TTS_CustomTTS",
+    "name": "自定义语音合成",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "unknown",
+    "reason": "请求未完成（ClientConnectorError），请检查网络或供应商状态"
+  },
+  {
+    "id": "TTS_GPT_SOVITS_V2",
+    "name": "GPT-SoVITS V2",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "unknown",
+    "reason": "请求未完成（ClientConnectorError），请检查网络或供应商状态"
+  },
+  {
+    "id": "TTS_GPT_SOVITS_V3",
+    "name": "GPT-SoVITS V3",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "unknown",
+    "reason": "请求未完成（ClientConnectorError），请检查网络或供应商状态"
+  },
+  {
+    "id": "TTS_IndexStreamTTS",
+    "name": "IndexTTS(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "unknown",
+    "reason": "请求未完成（ClientConnectorError），请检查网络或供应商状态"
+  },
+  {
+    "id": "TTS_PaddleSpeechTTS",
+    "name": "PaddleSpeech(流式)",
+    "default": 0,
+    "enabled": 1,
+    "modelType": "TTS",
+    "status": "unknown",
+    "reason": "请求未完成（ClientConnectorError），请检查网络或供应商状态"
+  }
+]

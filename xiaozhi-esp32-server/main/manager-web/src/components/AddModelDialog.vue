@@ -15,16 +15,17 @@
         <div class="switch-group">
           <div class="switch-item">
             <span>{{ $t('modelConfigDialog.enable') }}</span>
-            <el-switch v-model="formData.isEnabled" class="custom-switch"></el-switch>
+            <el-switch v-model="formData.isEnabled" disabled class="custom-switch"></el-switch>
           </div>
           <div class="switch-item" style="display: none;">
             <span>{{ $t('modelConfigDialog.setDefault') }}</span>
-            <el-switch v-model="formData.isDefault" class="custom-switch"></el-switch>
+            <el-switch v-model="formData.isDefault" disabled class="custom-switch"></el-switch>
           </div>
         </div>
       </div>
 
       <div class="divider"></div>
+      <p style="color:#667085">新增配置默认停用，保存后请在模型列表点击“检测”，有效后才能启用。</p>
       <el-form :model="formData" label-width="auto" label-position="left" class="custom-form">
         <div class="form-row">
           <el-form-item :label="$t('modelConfigDialog.modelId')" prop="id" style="flex: 1;">
@@ -114,8 +115,8 @@ export default {
         sort: 1,
         docLink: '',
         remark: '',
-        isEnabled: true,
-        isDefault: true,
+        isEnabled: false,
+        isDefault: false,
         configJson: {}
       }
     }
@@ -240,8 +241,8 @@ export default {
         sort: 1,
         docLink: '',
         remark: '',
-        isEnabled: true,
-        isDefault: true,
+        isEnabled: false,
+        isDefault: false,
         configJson: {}
       };
       // 重置加载状态

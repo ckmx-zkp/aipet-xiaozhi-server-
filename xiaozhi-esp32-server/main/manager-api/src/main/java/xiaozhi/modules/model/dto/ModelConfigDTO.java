@@ -29,6 +29,16 @@ public class ModelConfigDTO implements Serializable {
     @Schema(description = "是否默认配置(0否 1是)")
     private Integer isDefault;
 
+
+    @Schema(description = "有效性：valid/invalid/unknown")
+    private String validityStatus;
+
+    @Schema(description = "最近检测结果（不含凭据）")
+    private String validityReason;
+
+    @Schema(description = "最近检测时间")
+    private java.util.Date validityCheckedAt;
+
     @Schema(description = "是否启用")
     private Integer isEnabled;
 

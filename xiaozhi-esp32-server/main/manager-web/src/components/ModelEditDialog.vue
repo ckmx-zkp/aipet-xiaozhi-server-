@@ -15,18 +15,19 @@
       <div class="switch-group">
         <div class="switch-item">
           <span class="switch-label">{{ $t("modelConfigDialog.enable") }}</span>
-          <el-switch v-model="form.isEnabled" :active-value="1" :inactive-value="0" class="custom-switch"></el-switch>
+          <el-switch v-model="form.isEnabled" :disabled="!modelData || modelData.validityStatus !== 'valid'" :active-value="1" :inactive-value="0" class="custom-switch"></el-switch>
         </div>
         <div class="switch-item hidden">
           <span class="switch-label">{{ $t("modelConfigDialog.setDefault") }}</span>
-          <el-switch v-model="form.isDefault" :active-value="1" :inactive-value="0" class="custom-switch"></el-switch>
+          <el-switch v-model="form.isDefault" disabled :active-value="1" :inactive-value="0" class="custom-switch"></el-switch>
         </div>
       </div>
     </div>
 
     <div class="section-divider"></div>
 
-    <el-form :model="form" ref="form" label-width="auto" label-position="left">
+    <p style="color:#667085">修改 API、密钥或模型配置后会停用并重新标为待验证；请保存后检测。</p>
+      <el-form :model="form" ref="form" label-width="auto" label-position="left">
       <div class="form-row">
         <el-form-item :label="$t('modelConfigDialog.modelName')" prop="name" style="flex: 1">
           <el-input v-model="form.modelName" :placeholder="$t('modelConfigDialog.enterModelName')"></el-input>

@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
+import xiaozhi.modules.model.service.ModelValidityService;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -106,6 +108,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
     }
 
     @Override
+    @Transactional
     public ModelConfigDTO edit(String modelType, String provideCode, String id, ModelConfigBodyDTO modelConfigBodyDTO) {
         // 1. 参数验证
         validateEditParameters(modelType, provideCode, id, modelConfigBodyDTO);
@@ -122,8 +125,13 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         // 5. 准备更新实体并处理敏感数据
         ModelConfigEntity modelConfigEntity = prepareUpdateEntity(modelConfigBodyDTO, originalEntity, modelType, id);
 
+        ModelValidityService.applyEditPolicy(originalEntity, modelConfigEntity);
         // 6. 执行数据库更新
         modelConfigDao.updateById(modelConfigEntity);
+        if (modelConfigEntity.getValidityCheckedAt() == null) {
+            modelConfigDao.update(null, new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<ModelConfigEntity>()
+                    .eq("id", id).set("validity_checked_at", null));
+        }
 
         // 7. 清除缓存
         clearModelCache(id);
@@ -296,7 +304,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
      * 从数据库获取原始配置（不经过敏感数据处理）
      */
     private ModelConfigEntity getOriginalConfigFromDb(String id) {
-        ModelConfigEntity originalEntity = modelConfigDao.selectById(id);
+        ModelConfigEntity originalEntity = modelConfigDao.selectOne(new QueryWrapper<ModelConfigEntity>().eq("id", id).last("FOR UPDATE"));
         if (originalEntity == null) {
             throw new RenException(ErrorCode.RESOURCE_NOT_FOUND);
         }
@@ -450,6 +458,9 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
         ModelConfigEntity modelConfigEntity = ConvertUtils.sourceToTarget(modelConfigBodyDTO, ModelConfigEntity.class);
         modelConfigEntity.setModelType(modelType);
         modelConfigEntity.setIsDefault(0);
+        modelConfigEntity.setIsEnabled(0);
+        modelConfigEntity.setValidityStatus("unknown");
+        modelConfigEntity.setValidityReason("尚未验证");
         return modelConfigEntity;
     }
 
@@ -477,6 +488,7 @@ public class ModelConfigServiceImpl extends BaseServiceImpl<ModelConfigDao, Mode
     private void clearModelCache(String id) {
         redisUtils.delete(RedisKeys.getModelConfigById(id));
         redisUtils.delete(RedisKeys.getModelNameById(id));
+        redisUtils.delete(RedisKeys.getServerConfigKey());
     }
 
     /**

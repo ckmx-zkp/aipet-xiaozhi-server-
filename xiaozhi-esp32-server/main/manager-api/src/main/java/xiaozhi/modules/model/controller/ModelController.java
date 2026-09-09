@@ -1,6 +1,9 @@
 package xiaozhi.modules.model.controller;
 
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import xiaozhi.modules.model.service.ModelValidityService;
 
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,6 +41,7 @@ import xiaozhi.modules.timbre.service.TimbreService;
 @Tag(name = "模型配置")
 public class ModelController {
 
+    private final ModelValidityService validityService;
     private final ModelProviderService modelProviderService;
     private final TimbreService timbreService;
     private final ModelConfigService modelConfigService;
@@ -129,38 +133,47 @@ public class ModelController {
         if (entity == null) {
             return new Result<Void>().error("模型配置不存在");
         }
-        // 不能关闭默认模型
-        if (status == 0 && entity.getIsDefault() > 0) {
-            return new Result<Void>().error("默认模型配置不允许关闭");
-        }
-        // 不更新ConfigJson字段
-        entity.setConfigJson(null);
-        entity.setIsEnabled(status);
-        modelConfigService.updateById(entity);
+        if (status != 0 && status != 1) return new Result<Void>().error("启用状态只能为 0 或 1");
+        if (status == 1) ModelValidityService.requireValid(entity);
+        UpdateWrapper<ModelConfigEntity> update = new UpdateWrapper<ModelConfigEntity>().eq("id", id);
+        if (status == 1) update.eq("validity_status", "valid");
+        update.set("is_enabled", status);
+        if (status == 0) update.set("is_default", 0);
+        if (!modelConfigService.update(null, update)) return new Result<Void>().error("配置已改变，请刷新后重试");
+        validityService.clearCache(id);
         return new Result<Void>();
     }
 
     @PutMapping("/default/{id}")
     @Operation(summary = "设置默认模型")
     @RequiresPermissions("sys:role:superAdmin")
+    @Transactional
     public Result<Void> setDefaultModel(@PathVariable String id) {
         ModelConfigEntity entity = modelConfigService.selectById(id);
         if (entity == null) {
             return new Result<Void>().error("模型配置不存在");
         }
+        ModelValidityService.requireValid(entity);
         // 将其他模型设置为非默认
         modelConfigService.setDefaultModel(entity.getModelType(), 0);
-        entity.setIsEnabled(1);
-        entity.setIsDefault(1);
-        // 不更新ConfigJson字段
-        entity.setConfigJson(null);
-        modelConfigService.updateById(entity);
+        if (!modelConfigService.update(null, new UpdateWrapper<ModelConfigEntity>().eq("id", id)
+                .eq("validity_status", "valid").set("is_enabled", 1).set("is_default", 1))) {
+            throw new xiaozhi.common.exception.RenException("配置已改变，请刷新后重试");
+        }
+        validityService.clearCache(id);
 
         // 更新模板表中对应的模型ID
         agentTemplateService.updateDefaultTemplateModelId(entity.getModelType(), entity.getId());
 
         configService.getConfig(false);
         return new Result<Void>();
+    }
+
+    @PostMapping("/{id}/validate")
+    @Operation(summary = "验证模型实际可用性")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<ModelConfigEntity> validateModel(@PathVariable String id) {
+        return new Result<ModelConfigEntity>().ok(validityService.validate(id));
     }
 
     @GetMapping("/{modelId}/voices")

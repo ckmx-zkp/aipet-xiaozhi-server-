@@ -1,0 +1,1 @@
+ALTER TABLE ai_model_config ADD COLUMN validity_status VARCHAR(16) NOT NULL DEFAULT 'unknown', ADD COLUMN validity_reason VARCHAR(255) NOT NULL DEFAULT '尚未验证', ADD COLUMN validity_checked_at DATETIME NULL;
