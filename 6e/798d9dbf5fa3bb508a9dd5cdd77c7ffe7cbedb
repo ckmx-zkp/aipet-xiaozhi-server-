@@ -1,0 +1,82 @@
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/service/impl/ModelConfigServiceImpl.java
+  s_031441294ae30b::t_263e9fb714cb01 7-8,111,128,131-134,307,461-463,491
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/service/ModelValidityService.java
+  s_031441294ae30b::t_34d7c86f507ad9 70-78
+  s_031441294ae30b::t_263e9fb714cb01 1-41,43-69,79-109
+  s_031441294ae30b::t_cb57b7de5cbcad 42
+docs/12-模型有效性检查.md
+  s_031441294ae30b::t_22184d483bf928 1-14
+xiaozhi-esp32-server/main/manager-web/src/views/ModelConfig.vue
+  s_031441294ae30b::t_4095de8ccb2c01 98,100-101,103-112,117-119,241,509-522,524-525,528-540,557
+xiaozhi-esp32-server/main/manager-api/src/main/resources/db/changelog/202609091200.sql
+  s_031441294ae30b::t_f27709535a4b86 1
+deploy/model-validity/inventory.py
+  s_031441294ae30b::t_6d11c219955a75 1-19
+  s_031441294ae30b::t_64deddcb06b4d4 20
+xiaozhi-esp32-server/main/manager-web/src/components/AddModelDialog.vue
+  s_031441294ae30b::t_4095de8ccb2c01 18,22,28,118-119,244-245
+deploy/model-validity/README.md
+  s_031441294ae30b::t_c82d476ced7033 1-12
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/entity/ModelConfigEntity.java
+  s_031441294ae30b::t_f27709535a4b86 34-43
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/dto/ModelConfigDTO.java
+  s_031441294ae30b::t_f27709535a4b86 32-41
+deploy/model-validity/stage.py
+  s_031441294ae30b::t_914f52927e5c11 12-13
+  s_031441294ae30b::t_3db5b1a701d8b6 31
+  s_031441294ae30b::t_e52cf258397e46 1-11,14-30,32-41
+xiaozhi-esp32-server/main/xiaozhi-server/core/http_server.py
+  s_031441294ae30b::t_f27709535a4b86 6,17,46
+deploy/model-validity/audit-results-20260909.json
+  s_031441294ae30b::t_7eec09fadd3c13 1-441,595-596
+  s_031441294ae30b::t_12ead169a7ae4a 576
+  s_031441294ae30b::t_57fa6d9f16090a 442-575,577-594
+xiaozhi-esp32-server/main/manager-web/src/apis/module/model.js
+  s_031441294ae30b::t_4095de8ccb2c01 25-34
+xiaozhi-esp32-server/main/manager-api/src/main/resources/db/changelog/db.changelog-master.yaml
+  s_031441294ae30b::t_f27709535a4b86 714-720
+xiaozhi-esp32-server/main/xiaozhi-server/core/model_validation.py
+  s_031441294ae30b::t_6d11c219955a75 14-18,123,213
+  s_031441294ae30b::t_34d7c86f507ad9 54,163,165,169-170,220-240,242-264
+  s_031441294ae30b::t_ffb99ad88874fc 65,70-83,96,102,108
+  s_031441294ae30b::t_e4fd453a38700f 1-13,19-31,33-53,55-64,66-69,84-95,97-101,103-107,109-122,124-162,164,166-168,171-212,214-219,265-287
+  s_031441294ae30b::t_914f52927e5c11 241
+  s_031441294ae30b::t_20de896ceb6181 32
+xiaozhi-esp32-server/main/manager-web/src/components/ModelEditDialog.vue
+  s_031441294ae30b::t_4095de8ccb2c01 18,22,29-30
+deploy/model-validity/.gitignore
+  s_031441294ae30b::t_34d7c86f507ad9 1-2
+deploy/model-validity/resume_stage.py
+  s_031441294ae30b::t_3db5b1a701d8b6 1-14
+xiaozhi-esp32-server/main/manager-api/src/main/java/xiaozhi/modules/model/controller/ModelController.java
+  s_031441294ae30b::t_263e9fb714cb01 4-6,44,136-143,150,156,159-163,172-178
+deploy/model-validity/acceptance.py
+  s_031441294ae30b::t_0db4d184f76d7b 1-9,11-20,23,26-30,32-42,56
+  s_031441294ae30b::t_6c9fa67b0b8721 31,43-55
+  s_031441294ae30b::t_52c9025aaff0a6 10
+  s_031441294ae30b::t_9356afcb705775 21-22,24-25
+xiaozhi-esp32-server/main/xiaozhi-server/core/api/model_validation_handler.py
+  s_031441294ae30b::t_f27709535a4b86 1-46
+deploy/model-validity/audit.py
+  s_031441294ae30b::t_6d11c219955a75 1-2,4-21,23-25,29,31-43
+  s_031441294ae30b::t_9c1472bca4da12 3,26,28,30
+  s_031441294ae30b::t_f057a88ccca6e2 22,27
+docs/13-模型有效性验收-20260909.md
+  s_031441294ae30b::t_c82d476ced7033 1-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "6e798d9dbf5fa3bb508a9dd5cdd77c7ffe7cbedb",
+  "prompts": {},
+  "sessions": {
+    "s_031441294ae30b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a08567-a2e1-7b01-8424-ea695a85f38a",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
