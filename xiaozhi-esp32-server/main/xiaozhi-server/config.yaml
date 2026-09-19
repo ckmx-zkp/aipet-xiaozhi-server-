@@ -767,16 +767,44 @@ VLLM:
     url: https://dashscope.aliyuncs.com/compatible-mode/v1
     # 可在这里找到你的api key https://bailian.console.aliyun.com/?apiKey=1#/api-key
     api_key: 你的api_key
-  XunfeiSparkLLM:
-    # 定义LLM API类型
+  # 火山引擎 / 方舟平台视觉大模型接入（均通过实测验证支持图文多模态）
+  # 统一调用地址：https://ark.cn-beijing.volces.com/api/v3，获取密钥：https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey
+  DoubaoSeed20MiniVLLM:
     type: openai
-    # 先新建应用，在下面的地址
-    # 开通应用地址：https://console.xfyun.cn/app/myapp
-    # 有免费额度，但也要开通服务，才能获取api_key
-    # 每一个模型都需要单独开通，每一个模型的api_password都不同，例如Lite模型在https://console.xfyun.cn/services/cbm 开通
+    # 豆包 Seed 2.0 Mini：低延迟、高响应速度，与对话主力模型同款基底，推荐作为宠物端首选视觉模型
     base_url: https://ark.cn-beijing.volces.com/api/v3
-    model_name: lite
-    api_key: 你的api_password
+    model_name: doubao-seed-2-0-mini-260428
+    api_key: 你的doubao_web_key
+  DoubaoSeedCharacterVLLM:
+    type: openai
+    # 豆包 Seed 拟人角色模型：具备拟人化、角色口吻视觉解读能力
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model_name: doubao-seed-character-260628
+    api_key: 你的doubao_web_key
+  DoubaoSeed20ProVLLM:
+    type: openai
+    # 豆包 Seed 2.0 Pro：细节认知能力更强的高精度视觉模型
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model_name: doubao-seed-2-0-pro-260215
+    api_key: 你的doubao_web_key
+  DoubaoSeed21ProVLLM:
+    type: openai
+    # 豆包 Seed 2.1 Pro：最新版旗舰高阶多模态模型
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model_name: doubao-seed-2-1-pro-260915
+    api_key: 你的doubao_web_key
+  DoubaoSeed20LiteVLLM:
+    type: openai
+    # 豆包 Seed 2.0 Lite：轻量低开销视觉模型
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model_name: doubao-seed-2-0-lite-260428
+    api_key: 你的doubao_web_key
+  VolcengineGLM53FlashVLLM:
+    type: openai
+    # GLM 5.3 Flash（火山版）：闪电极速多模态视觉模型
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    model_name: glm-5-3-flash-260828
+    api_key: 你的doubao_web_key
 TTS:
   # 当前支持的type为edge、doubao，可自行适配
   EdgeTTS:

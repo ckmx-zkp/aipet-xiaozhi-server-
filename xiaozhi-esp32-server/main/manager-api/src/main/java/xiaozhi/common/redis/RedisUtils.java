@@ -131,6 +131,10 @@ public class RedisUtils {
         redisTemplate.expire(key, expire, TimeUnit.SECONDS);
     }
 
+    public Long hIncr(String key, String field, long delta) {
+        return redisTemplate.opsForHash().increment(key, field, delta);
+    }
+
     public void hDel(String key, Object... fields) {
         redisTemplate.opsForHash().delete(key, fields);
     }

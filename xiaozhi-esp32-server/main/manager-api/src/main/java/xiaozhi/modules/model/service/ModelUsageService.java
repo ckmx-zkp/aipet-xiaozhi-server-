@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import xiaozhi.modules.model.dao.ModelConfigDao;
+import xiaozhi.common.redis.RedisUtils;
 import xiaozhi.common.exception.RenException;
 
 @Service
@@ -19,6 +20,7 @@ public class ModelUsageService {
     private final ModelConfigDao dao;
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
+    private final RedisUtils redisUtils;
     private final Map<String,Map<String,Object>> quotaCache = new HashMap<>();
     private final Map<String,Long> quotaCheckedAt = new HashMap<>();
     private long checkedAt;
@@ -28,6 +30,7 @@ public class ModelUsageService {
         String key, host, provider, credential;
         Map<String,Object> view = new LinkedHashMap<>();
         List<String> names = new ArrayList<>();
+        List<String> rawModelNames = new ArrayList<>();
         int enabled, valid, invalid, unknown;
     }
     private Map<String,Group> groups() {
@@ -52,6 +55,10 @@ public class ModelUsageService {
                 groups.put(key,g);
             }
             g.names.add(model.getModelName());
+            Object realModel = c.get("model_name");
+            if (realModel != null && !realModel.toString().isBlank()) {
+                g.rawModelNames.add(realModel.toString());
+            }
             if (Integer.valueOf(1).equals(model.getIsEnabled())) g.enabled++;
             if ("valid".equals(model.getValidityStatus())) g.valid++;
             else if ("invalid".equals(model.getValidityStatus())) g.invalid++;
@@ -84,6 +91,7 @@ public class ModelUsageService {
             } else if (g.provider.startsWith("doubao") || g.provider.startsWith("huoshan") || g.host.endsWith("volces.com")) {
                 v.put("service","火山引擎 / 豆包");v.put("consoleUrl","https://console.volcengine.com/speech/service");
                 v.put("message","当前语音 AppID/Access Token 不能代替云账户账单 AK/SK；用量、资源包与到期日在火山控制台核对。");
+                queryLocalUsage(g);
             } else if (g.host.endsWith("bigmodel.cn")) {
                 v.put("service","智谱");v.put("consoleUrl","https://bigmodel.cn/usercenter/resourcepack");
                 v.put("message","当前模型密钥的账户用量查询权限未核实，请在智谱后台查看余额与资源包。");
@@ -170,5 +178,70 @@ public class ModelUsageService {
         }
         jdbc.update("INSERT INTO model_service_reminder(service_key,renewal_date) VALUES (?,?) ON DUPLICATE KEY UPDATE renewal_date=VALUES(renewal_date),updated_at=CURRENT_TIMESTAMP",key,parsed==null?null:java.sql.Date.valueOf(parsed));
         cached=null;
+    }
+
+    public void recordUsage(String modelName, int promptTokens, int completionTokens, int totalTokens) {
+        if (modelName == null || modelName.isBlank()) return;
+        String today = LocalDate.now(ZoneId.of("Asia/Shanghai")).toString();
+        String dailyKey = "model_usage:daily:" + today + ":" + modelName;
+        String totalKey = "model_usage:total:" + modelName;
+        long t = totalTokens > 0 ? totalTokens : (promptTokens + completionTokens);
+        try {
+            redisUtils.hIncr(dailyKey, "call_count", 1L);
+            redisUtils.hIncr(dailyKey, "prompt_tokens", (long) promptTokens);
+            redisUtils.hIncr(dailyKey, "completion_tokens", (long) completionTokens);
+            redisUtils.hIncr(dailyKey, "total_tokens", t);
+            redisUtils.expire(dailyKey, 86400 * 30);
+
+            redisUtils.hIncr(totalKey, "call_count", 1L);
+            redisUtils.hIncr(totalKey, "prompt_tokens", (long) promptTokens);
+            redisUtils.hIncr(totalKey, "completion_tokens", (long) completionTokens);
+            redisUtils.hIncr(totalKey, "total_tokens", t);
+
+            cached = null;
+        } catch (Exception ignored) {}
+    }
+
+    private void queryLocalUsage(Group g) {
+        String today = LocalDate.now(ZoneId.of("Asia/Shanghai")).toString();
+        List<Map<String, Object>> list = new ArrayList<>();
+        long totalCalls = 0;
+        long totalTokens = 0;
+        long todayCalls = 0;
+        long todayTokens = 0;
+
+        Set<String> checked = new HashSet<>();
+        for (String raw : g.rawModelNames) {
+            if (!checked.add(raw)) continue;
+            Map<String, Object> daily = redisUtils.hGetAll("model_usage:daily:" + today + ":" + raw);
+            Map<String, Object> all = redisUtils.hGetAll("model_usage:total:" + raw);
+            long dCalls = parseLong(daily != null ? daily.get("call_count") : null);
+            long dTokens = parseLong(daily != null ? daily.get("total_tokens") : null);
+            long aCalls = parseLong(all != null ? all.get("call_count") : null);
+            long aTokens = parseLong(all != null ? all.get("total_tokens") : null);
+            if (dCalls > 0 || aCalls > 0) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("label", raw + "（本地调用）");
+                row.put("total", aTokens);
+                row.put("used", dTokens);
+                row.put("message", "今日调用 " + dCalls + " 次，消耗 " + dTokens + " Tokens；累计调用 " + aCalls + " 次，消耗 " + aTokens + " Tokens");
+                list.add(row);
+                todayCalls += dCalls;
+                todayTokens += dTokens;
+                totalCalls += aCalls;
+                totalTokens += aTokens;
+            }
+        }
+        if (!list.isEmpty()) {
+            g.view.put("usage", list);
+            g.view.put("status", "ok");
+            g.view.put("message", "本地调用侧统计：今日累计调用 " + todayCalls + " 次，消耗 " + todayTokens + " Tokens；历史总消耗 " + totalTokens + " Tokens。");
+        }
+    }
+
+    private long parseLong(Object val) {
+        if (val == null) return 0L;
+        if (val instanceof Number n) return n.longValue();
+        try { return Long.parseLong(val.toString()); } catch (Exception e) { return 0L; }
     }
 }

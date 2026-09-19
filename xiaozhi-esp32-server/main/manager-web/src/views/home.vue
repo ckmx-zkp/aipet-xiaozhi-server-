@@ -438,25 +438,19 @@ export default {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #eff4ff;
+  background: #f8fafc;
   background-size: cover;
-  /* 确保背景图像覆盖整个元素 */
   background-position: center;
-  /* 从顶部中心对齐 */
-  -webkit-background-size: cover;
-  /* 兼容老版本WebKit浏览器 */
-  -o-background-size: cover;
-  /* 兼容老版本Opera浏览器 */
 }
 
 .add-device {
   height: 195px;
-  border-radius: 15px;
+  border-radius: 20px;
   position: relative;
-  background: linear-gradient(269.62deg,
-      #e0e6fd 0%,
-      #cce7ff 49.69%,
-      #d3d3fe 100%);
+  background: linear-gradient(135deg, #eef4ff 0%, #f0f7ff 50%, #f5f3ff 100%);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -4px rgba(78, 117, 255, 0.08);
+  overflow: hidden;
 }
 
 .add-device-bg {
@@ -465,32 +459,27 @@ export default {
   text-align: left;
   background-image: url("@/assets/home/main-top-bg.png");
   background-size: cover;
-  /* 确保背景图像覆盖整个元素 */
   background-position: center;
-  /* 从顶部中心对齐 */
-  -webkit-background-size: cover;
-  /* 兼容老版本WebKit浏览器 */
-  -o-background-size: cover;
   box-sizing: border-box;
 
-  /* 兼容老版本Opera浏览器 */
   .hellow-text {
     margin-left: 75px;
-    color: #3d4566;
-    font-size: 33px;
+    color: #1e293b;
+    font-size: 32px;
     font-weight: 700;
-    letter-spacing: 0;
+    letter-spacing: -0.02em;
   }
 
   .hi-hint {
     font-weight: 400;
-    font-size: 12px;
+    font-size: 13px;
     text-align: left;
-    color: #818cae;
+    color: #64748b;
     margin-left: 75px;
-    margin-top: 5px;
+    margin-top: 6px;
   }
 }
+
 .add-device-options {
   display: flex;
   margin-top: 16px;
@@ -500,9 +489,20 @@ export default {
 
 .add-device-btn {
   color: #fff;
-  margin-left: 10px;
-  background: #3375fd;
-  border-radius: 20px;
+  margin-left: 14px;
+  background: linear-gradient(135deg, #4e75ff 0%, #3b82f6 100%);
+  border: none;
+  border-radius: 24px;
+  padding: 11px 22px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(78, 117, 255, 0.3);
+  transition: all 0.25s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(78, 117, 255, 0.4);
+    background: linear-gradient(135deg, #3d66ff 0%, #2563eb 100%);
+  }
 }
 
 .search-container {
@@ -516,26 +516,44 @@ export default {
 
 .custom-search-input {
   &::v-deep .el-input__inner {
-    border-radius: 20px;
-    border: 1px solid transparent;
-    box-shadow: 0 2px 2px 0 #cfe1fb;
+    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    height: 40px;
+    line-height: 40px;
+    padding-left: 18px;
+    color: #1e293b;
+    transition: all 0.25s ease;
+
+    &:focus {
+      border-color: #4e75ff;
+      box-shadow: 0 0 0 3px rgba(78, 117, 255, 0.15);
+      background: #ffffff;
+    }
   }
+
   &::v-deep .el-input__suffix {
-    right: 10px;
+    right: 14px;
   }
+
   &::v-deep .el-input__suffix-inner {
     display: flex;
     align-items: center;
     height: 100%;
     cursor: pointer;
   }
-  .search-icon {
-    font-size: 14px;
-  }
-}
 
-.search-wrapper {
-  position: relative;
+  .search-icon {
+    font-size: 16px;
+    color: #94a3b8;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #4e75ff;
+    }
+  }
 }
 
 .search-history-dropdown {
@@ -544,32 +562,33 @@ export default {
   left: 0;
   right: 0;
   background: white;
-  border: 1px solid #e4e6ef;
-  border-radius: 4px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   z-index: 1000;
-  margin-top: 2px;
+  margin-top: 8px;
+  overflow: hidden;
 }
 
 .search-history-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
   font-size: 12px;
-  color: #909399;
+  color: #94a3b8;
 }
 
 .clear-history-btn {
-  color: #909399;
-  font-size: 11px;
+  color: #94a3b8;
+  font-size: 12px;
   padding: 0;
   height: auto;
-}
 
-.clear-history-btn:hover {
-  color: #606266;
+  &:hover {
+    color: #ef4444;
+  }
 }
 
 .search-history-list {
@@ -581,89 +600,37 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 9px 14px;
   cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: #f8fafc;
+    color: #4e75ff;
+  }
+}
+
+.clear-item-icon {
   font-size: 12px;
-  color: #606266;
-}
+  color: #94a3b8;
+  visibility: hidden;
 
-.search-history-item:hover {
-  background-color: #f5f7fa;
-}
-
-.search-wrapper {
-  position: relative;
-}
-
-.search-history-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e4e6ef;
-  border-radius: 10px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  margin-top: 6px;
-}
-
-.clear-history-btn {
-  color: #909399;
-  font-size: 12px;
-  padding: 0;
-  height: auto;
-}
-
-.clear-history-btn:hover {
-  color: #606266;
-}
-
-.search-history-list {
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.search-history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #606266;
-}
-
-.search-history-item:hover {
-  background-color: #f5f7fa;
+  &:hover {
+    color: #ef4444;
+  }
 }
 
 .search-history-item:hover .clear-item-icon {
   visibility: visible;
 }
 
-.clear-item-icon:hover {
-  color: #ff4949;
-}
-
-.clear-item-icon {
-  font-size: 10px;
-  color: #909399;
-  visibility: hidden;
-}
-
 .device-list-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 30px;
-  padding: 30px 0;
-}
-
-/* 在 DeviceItem.vue 的样式中 */
-.device-item {
-  margin: 0 !important;
-  /* 避免冲突 */
-  width: auto !important;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 22px;
+  padding: 24px 0;
 }
 
 .footer {
@@ -671,9 +638,8 @@ export default {
   font-weight: 400;
   margin-top: auto;
   padding-top: 30px;
-  color: #979db1;
+  color: #94a3b8;
   text-align: center;
-  /* 居中显示 */
 }
 
 /* 骨架屏动画 */
@@ -684,44 +650,46 @@ export default {
 }
 
 .skeleton-item {
-  background: #fff;
-  border-radius: 8px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
   padding: 20px;
-  height: 120px;
+  height: 180px;
   position: relative;
   overflow: hidden;
-  margin-bottom: 20px;
+  box-sizing: border-box;
 }
 
 .skeleton-image {
-  width: 80px;
-  height: 80px;
-  background: #f0f2f5;
-  border-radius: 4px;
+  width: 48px;
+  height: 48px;
+  background: #f1f5f9;
+  border-radius: 14px;
   float: left;
   position: relative;
   overflow: hidden;
 }
 
 .skeleton-content {
-  margin-left: 100px;
+  margin-left: 64px;
 }
 
 .skeleton-line {
   height: 16px;
-  background: #f0f2f5;
-  border-radius: 4px;
+  background: #f1f5f9;
+  border-radius: 6px;
   margin-bottom: 12px;
-  width: 70%;
+  width: 60%;
   position: relative;
   overflow: hidden;
 }
 
 .skeleton-line-short {
   height: 12px;
-  background: #f0f2f5;
-  border-radius: 4px;
-  width: 50%;
+  background: #f1f5f9;
+  border-radius: 6px;
+  width: 40%;
 }
 
 .skeleton-item::after {
@@ -731,10 +699,12 @@ export default {
   left: 0;
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg,
-      rgba(255, 255, 255, 0),
-      rgba(255, 255, 255, 0.3),
-      rgba(255, 255, 255, 0));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0)
+  );
   animation: shimmer 1.5s infinite;
 }
 

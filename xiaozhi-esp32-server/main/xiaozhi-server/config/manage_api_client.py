@@ -246,6 +246,28 @@ async def report(
         return None
 
 
+async def report_model_usage(
+    model_name: str, prompt_tokens: int = 0, completion_tokens: int = 0, total_tokens: int = 0
+) -> Optional[Dict]:
+    """异步模型Token用量上报（方案B）"""
+    if not model_name or not ManageApiClient._instance:
+        return None
+    try:
+        return await ManageApiClient._instance._execute_async_request(
+            "POST",
+            "/models/usage/report",
+            json={
+                "modelName": model_name,
+                "promptTokens": prompt_tokens,
+                "completionTokens": completion_tokens,
+                "totalTokens": total_tokens or (prompt_tokens + completion_tokens),
+            },
+        )
+    except Exception as e:
+        # 用量上报静默失败，绝不影响实时链路
+        return None
+
+
 async def get_bound_devices() -> Optional[list]:
     """列出智控台已绑定设备 MAC。"""
     if not ManageApiClient._instance:

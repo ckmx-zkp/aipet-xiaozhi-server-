@@ -1,64 +1,111 @@
 <template>
-  <div class="device-item">
-    <div style="display: flex;justify-content: space-between;">
-    <el-tooltip :content="device.agentName" placement="top" effect="light">
-      <div class="device-item-title">
-        {{ device.agentName }}
+  <div class="device-card">
+    <!-- 头部：头像 + 名称 + 状态与操作 -->
+    <div class="card-header">
+      <div class="header-main">
+        <div class="agent-avatar-wrap">
+          <img :src="agentAvatar" class="agent-avatar" alt="agent avatar" />
+          <span class="status-indicator" :class="{ 'is-active': isRecentlyActive }"></span>
+        </div>
+        <div class="agent-title-info">
+          <el-tooltip :content="device.agentName" placement="top" effect="light">
+            <div class="agent-name">{{ device.agentName }}</div>
+          </el-tooltip>
+          <div class="agent-sub-status">
+            <span class="device-badge">
+              <i class="el-icon-cpu"></i> {{ device.deviceCount || 0 }} {{ $t('home.devicesCountUnit') || '台设备' }}
+            </span>
+          </div>
+        </div>
       </div>
-    </el-tooltip>
-      <div>
-        <img src="@/assets/home/delete.png" alt="" style="width: 18px;height: 18px;margin-right: 10px;"
-          @click.stop="handleDelete" />
-        <el-tooltip class="item" effect="light" :content="device.systemPrompt" placement="top"
-          popper-class="device-item-tooltip"> 
-          <img src="@/assets/home/info.png" alt="" style="width: 18px;height: 18px;" />
+      <div class="header-actions">
+        <el-tooltip effect="light" :content="device.systemPrompt || $t('roleConfig.noPrompt') || '暂无人设提示词'" placement="top" popper-class="device-item-tooltip">
+          <button class="icon-action-btn" title="查看人设">
+            <i class="el-icon-info"></i>
+          </button>
         </el-tooltip>
+        <button class="icon-action-btn delete-btn" title="删除智能体" @click.stop="handleDelete">
+          <i class="el-icon-delete"></i>
+        </button>
       </div>
     </div>
-    <div class="device-name">
-      {{ $t('home.languageModel') }}：{{ device.llmModelName }}
+
+    <!-- 中部：模型配置芯片（Chips） -->
+    <div class="model-chips-container">
+      <div class="model-chip llm-chip" :title="device.llmModelName">
+        <div class="chip-icon"><i class="el-icon-magic-stick"></i></div>
+        <div class="chip-text">
+          <span class="chip-label">{{ $t('home.languageModel') }}:</span>
+          <span class="chip-value">{{ device.llmModelName || '-' }}</span>
+        </div>
+      </div>
+      <div class="model-chip tts-chip" :title="`${device.ttsModelName} (${device.ttsVoiceName})`">
+        <div class="chip-icon"><i class="el-icon-headset"></i></div>
+        <div class="chip-text">
+          <span class="chip-label">{{ $t('home.voiceModel') }}:</span>
+          <span class="chip-value">{{ device.ttsVoiceName || device.ttsModelName || '-' }}</span>
+        </div>
+      </div>
     </div>
-    <div class="device-name">
-      {{ $t('home.voiceModel') }}：{{ device.ttsModelName }} ({{ device.ttsVoiceName }})
-    </div>
-    <div style="display: flex;gap: 10px;align-items: center;">
-      <div class="settings-btn" @click="handleConfigure">
-        {{ $t('home.configureRole') }}
-      </div>
-      <div v-if="featureStatus.voiceprintRecognition" class="settings-btn" @click="handleVoicePrint">
-        {{ $t('home.voiceprintRecognition') }}
-      </div>
-      <div class="settings-btn" @click="handleDeviceManage">
-        {{ $t('home.deviceManagement') }}({{ device.deviceCount }})
-      </div>
-      <div :class="['settings-btn', { 'disabled-btn': device.memModelId === 'Memory_nomem' }]"
-        @click="handleChatHistory">
+
+    <!-- 操作按钮组 -->
+    <div class="action-buttons-row">
+      <button class="action-pill primary-pill" @click="handleConfigure">
+        <i class="el-icon-setting"></i>
+        <span>{{ $t('home.configureRole') }}</span>
+      </button>
+
+      <button class="action-pill secondary-pill" @click="handleDeviceManage">
+        <span>{{ $t('home.deviceManagement') }}</span>
+        <span class="pill-count">({{ device.deviceCount || 0 }})</span>
+      </button>
+
+      <div
+        :class="['action-pill', 'secondary-pill', { 'disabled-pill': device.memModelId === 'Memory_nomem' }]"
+        @click="handleChatHistory"
+      >
         <el-tooltip effect="light" v-if="device.memModelId === 'Memory_nomem'" :content="$t('home.enableMemory')" placement="top">
           <span>{{ $t('home.chatHistory') }}</span>
         </el-tooltip>
         <span v-else>{{ $t('home.chatHistory') }}</span>
       </div>
+
+      <button
+        v-if="featureStatus.voiceprintRecognition"
+        class="action-pill secondary-pill"
+        @click="handleVoicePrint"
+      >
+        <span>{{ $t('home.voiceprintRecognition') }}</span>
+      </button>
     </div>
-    <div class="version-info">
-      <div>{{ $t('home.lastConversation') }}：{{ formattedLastConnectedTime }}</div>
-      <el-tooltip :content="tags.join()" placement="top" effect="light">
-        <div class="version-info-scroll">
-          {{ tags.join() }}
-        </div>
-      </el-tooltip>
+
+    <!-- 底部：对话时间与标签 -->
+    <div class="card-footer">
+      <div class="footer-time">
+        <i class="el-icon-time"></i>
+        <span>{{ formattedLastConnectedTime }}</span>
+      </div>
+      <div class="footer-tags" v-if="tags.length > 0">
+        <el-tooltip :content="tags.join(', ')" placement="top" effect="light">
+          <div class="tag-capsules">
+            <span v-for="(tag, idx) in tags.slice(0, 2)" :key="idx" class="tag-capsule">
+              {{ tag }}
+            </span>
+            <span v-if="tags.length > 2" class="tag-more">+{{ tags.length - 2 }}</span>
+          </div>
+        </el-tooltip>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import i18n from '@/i18n';
-
 export default {
   name: 'DeviceItem',
   props: {
     device: { type: Object, required: true },
-    featureStatus: { 
-      type: Object, 
+    featureStatus: {
+      type: Object,
       default: () => ({
         voiceprintRecognition: false,
         voiceClone: false,
@@ -66,10 +113,28 @@ export default {
       })
     }
   },
-  data() {
-    return { switchValue: false }
-  },
   computed: {
+    // 根据 agentId 计算一个确定性头像 (1-16)
+    agentAvatar() {
+      const id = String(this.device.agentId || this.device.id || '1');
+      let hash = 0;
+      for (let i = 0; i < id.length; i++) {
+        hash = (hash << 5) - hash + id.charCodeAt(i);
+        hash |= 0;
+      }
+      const avatarIndex = (Math.abs(hash) % 16) + 1;
+      try {
+        return require(`@/assets/device-avatars/xiaozhi-logo${avatarIndex}.png`);
+      } catch (e) {
+        return require('@/assets/xiaozhi-logo.png');
+      }
+    },
+    isRecentlyActive() {
+      if (!this.device.lastConnectedAt) return false;
+      const lastTime = new Date(this.device.lastConnectedAt).getTime();
+      const now = Date.now();
+      return now - lastTime < 3600 * 1000; // 1 小时内活跃
+    },
     formattedLastConnectedTime() {
       if (!this.device.lastConnectedAt) return this.$t('home.noConversation');
 
@@ -96,7 +161,7 @@ export default {
   },
   methods: {
     handleDelete() {
-      this.$emit('delete', this.device)
+      this.$emit('delete', this.device);
     },
     handleConfigure() {
       this.$router.push({ path: '/role-config', query: { agentId: this.device.agentId } });
@@ -109,86 +174,320 @@ export default {
     },
     handleChatHistory() {
       if (this.device.memModelId === 'Memory_nomem') {
-        return
+        return;
       }
-      this.$emit('chat-history', { agentId: this.device.agentId, agentName: this.device.agentName })
+      this.$emit('chat-history', { agentId: this.device.agentId, agentName: this.device.agentName });
     }
-  },
-}
+  }
+};
 </script>
+
 <style lang="scss" scoped>
-.device-item {
-  width: 342px;
-  border-radius: 20px;
-  background: #fafcfe;
-  padding: 22px 22px 14px;
+.device-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+  padding: 20px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
-  &-title {
-    flex: 1;
-    font-weight: bold;
-    font-size: 18px;
-    color: #3d4566;
-    text-align: left;
-    text-overflow: ellipsis;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px -4px rgba(78, 117, 255, 0.14), 0 4px 12px -2px rgba(78, 117, 255, 0.06);
+    border-color: rgba(78, 117, 255, 0.35);
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-avatar-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8), 0 2px 8px rgba(78, 117, 255, 0.12);
+
+  .agent-avatar {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .status-indicator {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #cbd5e1;
+    border: 2px solid #ffffff;
+
+    &.is-active {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+  }
+}
+
+.agent-title-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+
+  .agent-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
     white-space: nowrap;
     overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-bottom: 4px;
+  }
+
+  .agent-sub-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    .device-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #475569;
+      background: #f1f5f9;
+      border-radius: 20px;
+    }
   }
 }
 
-.device-name {
-  margin: 7px 0 10px;
-  font-weight: 400;
-  font-size: 11px;
-  color: #3d4566;
-  text-align: left;
-}
-
-.settings-btn {
-  font-weight: 500;
-  font-size: 12px;
-  color: #5778ff;
-  background: #e6ebff;
-  width: auto;
-  padding: 0 12px;
-  height: 21px;
-  line-height: 21px;
-  cursor: pointer;
-  border-radius: 14px;
-}
-
-.version-info {
+.header-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 15px;
+  gap: 4px;
+
+  .icon-action-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 15px;
+    line-height: 1;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #f1f5f9;
+      color: #4e75ff;
+    }
+
+    &.delete-btn:hover {
+      background: #fee2e2;
+      color: #ef4444;
+    }
+  }
+}
+
+/* 模型配置芯片 */
+.model-chips-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.model-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
   font-size: 12px;
-  color: #979db1;
-  font-weight: 400;
-  &-scroll {
-    margin-left: 20px;
+  text-align: left;
+  transition: background 0.2s ease;
+
+  .chip-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .chip-text {
     flex: 1;
+    min-width: 0;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-wrap: nowrap;
-    text-align: right;
+
+    .chip-label {
+      color: #64748b;
+      margin-right: 4px;
+    }
+
+    .chip-value {
+      font-weight: 600;
+      color: #334155;
+    }
+  }
+
+  &.llm-chip {
+    background: #f8faff;
+    border: 1px solid #e0eaff;
+
+    .chip-icon {
+      background: #e0ebff;
+      color: #3b82f6;
+    }
+  }
+
+  &.tts-chip {
+    background: #faf7ff;
+    border: 1px solid #f0e7fe;
+
+    .chip-icon {
+      background: #ede4ff;
+      color: #8b5cf6;
+    }
   }
 }
 
-.more-tag {
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.all-tags-popover {
+/* 胶囊按钮组 */
+.action-buttons-row {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.action-pill {
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+  padding: 5px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  line-height: 1.4;
+
+  &.primary-pill {
+    background: linear-gradient(135deg, #4e75ff 0%, #3b82f6 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(78, 117, 255, 0.25);
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(78, 117, 255, 0.35);
+    }
+  }
+
+  &.secondary-pill {
+    background: #f1f5f9;
+    color: #475569;
+
+    .pill-count {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    &:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+      transform: translateY(-1px);
+    }
+  }
+
+  &.disabled-pill {
+    background: #f8fafc;
+    color: #cbd5e1;
+    cursor: not-allowed;
+
+    &:hover {
+      transform: none;
+      background: #f8fafc;
+    }
+  }
+}
+
+/* 卡片底部 */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.footer-time {
+  display: flex;
+  align-items: center;
   gap: 4px;
 }
 
-.disabled-btn {
-  background: #e6e6e6;
-  color: #999;
-  cursor: not-allowed;
+.footer-tags {
+  display: flex;
+  align-items: center;
+}
+
+.tag-capsules {
+  display: flex;
+  gap: 4px;
+
+  .tag-capsule {
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    max-width: 70px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .tag-more {
+    font-size: 11px;
+    color: #94a3b8;
+  }
 }
 </style>
 
@@ -199,17 +498,11 @@ export default {
   overflow-y: auto !important;
   scrollbar-width: thin;
   word-break: break-word;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
 }
 
 .device-item-tooltip .popper__arrow {
   display: none !important;
-}
-
-.device-item-tooltip[x-placement^="top"] .popper__arrow {
-  border-top-color: transparent !important;
-}
-
-.device-item-tooltip[x-placement^="bottom"] .popper__arrow {
-  border-bottom-color: transparent !important;
 }
 </style>

@@ -61,6 +61,22 @@ class VLLMProvider(VLLMProviderBase):
                 model=self.model_name, messages=messages, stream=False
             )
 
+            if getattr(response, "usage", None):
+                u = response.usage
+                p = getattr(u, "prompt_tokens", 0) or 0
+                c = getattr(u, "completion_tokens", 0) or 0
+                t = getattr(u, "total_tokens", 0) or (p + c)
+                logger.bind(tag=TAG).info(
+                    f"VLLM 视觉Token消耗：模型 {self.model_name} 输入 {p}，输出 {c}，共计 {t}"
+                )
+                try:
+                    import asyncio
+                    from config.manage_api_client import report_model_usage
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(report_model_usage(self.model_name, p, c, t))
+                except Exception:
+                    pass
+
             return response.choices[0].message.content
 
         except Exception as e:

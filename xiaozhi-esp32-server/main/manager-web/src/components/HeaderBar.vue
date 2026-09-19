@@ -497,10 +497,17 @@ export default {
 
 <style lang="scss" scoped>
 .header {
-  background: linear-gradient(180deg, #dfeafe, #eff4ff);
-  height: 63px !important;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid #eef2f6;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  height: 64px !important;
   min-width: 900px;
   overflow: visible;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-container {
@@ -508,7 +515,9 @@ export default {
   justify-content: space-between;
   align-items: center;
   height: 100%;
-  padding: 0 10px;
+  padding: 0 16px;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
 .header-left {
@@ -520,8 +529,9 @@ export default {
 }
 
 .logo-img {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
 }
 
 .brand-img {
@@ -531,54 +541,51 @@ export default {
 .header-center {
   display: flex;
   align-items: center;
-  gap: 25px;
-  background: white;
+  gap: 6px;
+  background: #f1f5f9;
   border-radius: 30px;
-  box-shadow: 0 0 6px 0px #cfe1fb;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
   padding: 4px;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
   justify-content: flex-end;
 }
 
 .equipment-management {
-  padding: 8px 16px;
-  border-radius: 30px;
+  padding: 6px 16px;
+  border-radius: 20px;
   display: flex;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
-  gap: 7px;
-  color: #6c79a8;
-  margin-left: 1px;
+  gap: 6px;
+  color: #64748b;
   align-items: center;
-  transition: all 0.3s ease;
+  transition: all 0.22s ease;
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
+
+  &:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.6);
+  }
 }
 
 .equipment-management.active-tab {
-  color: #fff !important;
-  background: linear-gradient(90deg, #2983fe 0%, #5251fc 100%);
-  box-shadow: 0 1px 8px rgba(41, 131, 254, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #4e75ff 0%, #3b82f6 100%);
+  box-shadow: 0 2px 8px rgba(78, 117, 255, 0.3);
+  font-weight: 600;
 
-.equipment-management.active-tab::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 100%);
-  pointer-events: none;
+  &:hover {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #4e75ff 0%, #3b82f6 100%);
+  }
 }
 
 .equipment-management img {

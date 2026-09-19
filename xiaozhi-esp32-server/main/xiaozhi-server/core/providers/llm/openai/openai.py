@@ -1,7 +1,9 @@
 import httpx
 import openai
+import asyncio
 from openai.types import CompletionUsage
 from config.logger import setup_logging
+from config.manage_api_client import report_model_usage
 from core.utils.util import check_model_key
 from core.utils.think_filter import ThinkTagFilter
 from core.providers.llm.base import LLMProviderBase
@@ -103,6 +105,22 @@ class LLMProvider(LLMProviderBase):
         ):
             logger.bind(tag=TAG).debug("Filtered provider reasoning from device output")
         return getattr(delta, "content", "") or ""
+
+    def _record_chunk_usage(self, chunk):
+        usage_info = getattr(chunk, "usage", None)
+        if usage_info is not None:
+            p = getattr(usage_info, "prompt_tokens", 0) or 0
+            c = getattr(usage_info, "completion_tokens", 0) or 0
+            t = getattr(usage_info, "total_tokens", 0) or (p + c)
+            logger.bind(tag=TAG).info(
+                f"Token 消耗：模型 {self.model_name} 输入 {p}，输出 {c}，共计 {t}"
+            )
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(report_model_usage(self.model_name, p, c, t))
+            except Exception:
+                pass
+
     def response(self, session_id, dialogue, **kwargs):
         dialogue = self.normalize_dialogue(dialogue)
 
@@ -110,6 +128,7 @@ class LLMProvider(LLMProviderBase):
             "model": self.model_name,
             "messages": dialogue,
             "stream": True,
+            "stream_options": {"include_usage": True},
         }
 
         # 添加可选参数,只有当参数不为None时才添加
@@ -132,6 +151,7 @@ class LLMProvider(LLMProviderBase):
         think_filter = ThinkTagFilter()
         try:            
             for chunk in responses:
+                self._record_chunk_usage(chunk)
                 try:
                     delta = chunk.choices[0].delta if getattr(chunk, "choices", None) else None
                     content = self._visible_content(delta)
@@ -154,6 +174,7 @@ class LLMProvider(LLMProviderBase):
             "model": self.model_name,
             "messages": dialogue,
             "stream": True,
+            "stream_options": {"include_usage": True},
             "tools": functions,
         }
 
@@ -176,18 +197,12 @@ class LLMProvider(LLMProviderBase):
         try:
             think_filter = ThinkTagFilter()
             for chunk in stream:
+                self._record_chunk_usage(chunk)
                 if getattr(chunk, "choices", None):
                     delta = chunk.choices[0].delta
                     content = think_filter.feed(self._visible_content(delta))
                     tool_calls = getattr(delta, "tool_calls", None)
                     yield content, tool_calls
-                elif isinstance(getattr(chunk, "usage", None), CompletionUsage):
-                    usage_info = getattr(chunk, "usage", None)
-                    logger.bind(tag=TAG).info(
-                        f"Token 消耗：输入 {getattr(usage_info, 'prompt_tokens', '未知')}，"
-                        f"输出 {getattr(usage_info, 'completion_tokens', '未知')}，"
-                        f"共计 {getattr(usage_info, 'total_tokens', '未知')}"
-                    )
             tail = think_filter.flush()
             if tail:
                 yield tail, None
