@@ -49,6 +49,21 @@ public class DeviceEntity {
     @Schema(description = "排序")
     private Integer sort;
 
+    @Schema(description = "设备专属TTS模型ID，为空则跟随智能体")
+    private String ttsModelId;
+
+    @Schema(description = "设备专属音色ID，为空则跟随智能体")
+    private String ttsVoiceId;
+
+    @Schema(description = "设备专属TTS音量")
+    private Integer ttsVolume;
+
+    @Schema(description = "设备专属TTS语速")
+    private Integer ttsRate;
+
+    @Schema(description = "设备专属TTS音调")
+    private Integer ttsPitch;
+
     @Schema(description = "更新者")
     @TableField(fill = FieldFill.UPDATE)
     private Long updater;

@@ -99,6 +99,9 @@
       <CustomButton icon="el-icon-delete" size="small" type="delete" @click="deleteRow(filteredTtsModels.filter(row => row.selected))">
         {{ $t('ttsModel.delete') }}
       </CustomButton>
+      <CustomButton icon="el-icon-download" size="small" type="default" :loading="importingHuoshan" @click="handleImportHuoshan">
+        导入火山官方音色库
+      </CustomButton>
     </div>
   </CustomDialog>
 </template>
@@ -141,6 +144,7 @@ export default {
       selectAll: false,
       selectedRows: [],
       loading: false,
+      importingHuoshan: false,
       showReferenceColumns: false, // 控制是否显示参考列
     };
   },
@@ -526,6 +530,25 @@ export default {
 
     isValidAudioUrl(url) {
       return url && (url.endsWith('.mp3') || url.endsWith('.ogg') || url.endsWith('.wav'));
+    },
+
+    handleImportHuoshan() {
+      this.$confirm('确定要一键导入/更新火山官方预置音色库吗？包含通用男女声、特色方言、角色扮演、童声以及 Seed 2.0 大模型音色。', '提示', {
+        confirmButtonText: '确定导入',
+        cancelButtonText: '取消',
+        type: 'info'
+      }).then(() => {
+        this.importingHuoshan = true;
+        Api.timbre.importHuoshanVoices(this.ttsModelId, (res) => {
+          this.importingHuoshan = false;
+          if (res.code === 0) {
+            this.$message.success(`成功导入/同步 ${res.data} 个火山音色！`);
+            this.loadData();
+          } else {
+            this.$message.error(res.msg || '导入火山音色失败');
+          }
+        });
+      }).catch(() => {});
     }
   }
 };

@@ -141,12 +141,18 @@ public class ConfigServiceImpl implements ConfigService {
         if (agent == null) {
             throw new RenException(ErrorCode.AGENT_NOT_FOUND);
         }
-        // 获取音色信息
+        // 获取音色信息：优先使用设备独立配置，为空则回退到智能体默认配置
+        String effectiveTtsVoiceId = StringUtils.isNotBlank(device.getTtsVoiceId()) ? device.getTtsVoiceId() : agent.getTtsVoiceId();
+        String effectiveTtsModelId = StringUtils.isNotBlank(device.getTtsModelId()) ? device.getTtsModelId() : agent.getTtsModelId();
+        Integer effectiveTtsVolume = device.getTtsVolume() != null ? device.getTtsVolume() : agent.getTtsVolume();
+        Integer effectiveTtsRate = device.getTtsRate() != null ? device.getTtsRate() : agent.getTtsRate();
+        Integer effectiveTtsPitch = device.getTtsPitch() != null ? device.getTtsPitch() : agent.getTtsPitch();
+
         String voice = null;
         String referenceAudio = null;
         String referenceText = null;
         String language = null;
-        TimbreDetailsVO timbre = timbreService.get(agent.getTtsVoiceId());
+        TimbreDetailsVO timbre = timbreService.get(effectiveTtsVoiceId);
         if (timbre != null) {
             voice = timbre.getTtsVoice();
             referenceAudio = timbre.getReferenceAudio();
@@ -158,11 +164,15 @@ public class ConfigServiceImpl implements ConfigService {
                 language = timbre.getLanguages().split("、")[0].trim();
             }
         } else {
-            VoiceCloneEntity voice_print = cloneVoiceService.selectById(agent.getTtsVoiceId());
+            VoiceCloneEntity voice_print = cloneVoiceService.selectById(effectiveTtsVoiceId);
             if (voice_print != null) {
                 voice = voice_print.getVoiceId();
                 // 优先使用用户选择的语言，如果没有则使用默认值
                 language = StringUtils.isNotBlank(agent.getTtsLanguage()) ? agent.getTtsLanguage() : "普通话";
+            } else if (StringUtils.isNotBlank(effectiveTtsVoiceId)) {
+                // 如果是直接配置的官方音色代码
+                voice = effectiveTtsVoiceId;
+                language = "普通话";
             }
         }
         // 构建返回数据
@@ -229,15 +239,15 @@ public class ConfigServiceImpl implements ConfigService {
                 referenceAudio,
                 referenceText,
                 language,
-                agent.getTtsVolume(),
-                agent.getTtsRate(),
-                agent.getTtsPitch(),
+                effectiveTtsVolume,
+                effectiveTtsRate,
+                effectiveTtsPitch,
                 agent.getVadModelId(),
                 agent.getAsrModelId(),
                 agent.getLlmModelId(),
                 agent.getVllmModelId(),
                 agent.getSlmModelId(),
-                agent.getTtsModelId(),
+                effectiveTtsModelId,
                 agent.getMemModelId(),
                 agent.getIntentModelId(),
                 null,
@@ -474,12 +484,14 @@ public class ConfigServiceImpl implements ConfigService {
                     if (ttsPitch != null)
                         ((Map<String, Object>) model.getConfigJson()).put("ttsPitch", ttsPitch);
 
-                    // 火山引擎声音克隆需要替换resource_id
+                    // 火山引擎声音克隆与2.0大模型需要替换resource_id
                     Map<String, Object> map = (Map<String, Object>) model.getConfigJson();
                     if (Constant.VOICE_CLONE_HUOSHAN_DOUBLE_STREAM.equals(map.get("type"))) {
                         // 如果voice是”S_”开头的，使用seed-icl-1.0
                         if (voice != null && voice.startsWith("S_")) {
                             map.put("resource_id", "seed-icl-1.0");
+                        } else if (voice != null && voice.contains("uranus")) {
+                            map.put("resource_id", "seed-tts-2.0");
                         }
                     }
                 }

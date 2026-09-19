@@ -81,4 +81,12 @@ public interface TimbreService extends BaseService<TimbreEntity> {
      * @return 音色信息
      */
     VoiceDTO getByVoiceCode(String ttsModelId, String voiceCode);
+
+    /**
+     * 一键导入火山官方预置音色库
+     *
+     * @param ttsModelId 目标TTS模型ID（如TTS_HuoshanDoubleStreamTTS）
+     * @return 导入/更新的音色总数
+     */
+    int importHuoshanVoices(String ttsModelId);
 }

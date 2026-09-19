@@ -83,10 +83,10 @@ public class DeviceController {
         return new Result<String>().ok(code);
     }
 
-    @GetMapping("/bind/{agentId}")
+    @GetMapping({"/bind/{agentId}", "/bind"})
     @Operation(summary = "获取已绑定设备")
     @RequiresPermissions("sys:role:normal")
-    public Result<List<UserShowDeviceListVO>> getUserDevices(@PathVariable String agentId) {
+    public Result<List<UserShowDeviceListVO>> getUserDevices(@PathVariable(required = false) String agentId) {
         UserDetail user = SecurityUser.getUser();
         List<UserShowDeviceListVO> devices = deviceService.getUserDeviceList(user.getId(), agentId);
         return new Result<List<UserShowDeviceListVO>>().ok(devices);
@@ -125,6 +125,13 @@ public class DeviceController {
             return new Result<Void>().error("设备不存在");
         }
         BeanUtils.copyProperties(deviceUpdateDTO, entity);
+        // 如果 ttsVoiceId 为空字符串，显式置为 null（表示跟随智能体默认音色）
+        if (deviceUpdateDTO.getTtsVoiceId() != null && deviceUpdateDTO.getTtsVoiceId().trim().isEmpty()) {
+            entity.setTtsVoiceId(null);
+        }
+        if (deviceUpdateDTO.getTtsModelId() != null && deviceUpdateDTO.getTtsModelId().trim().isEmpty()) {
+            entity.setTtsModelId(null);
+        }
         if (!deviceService.updateById(entity)) {
             return new Result<Void>().error(ErrorCode.UPDATE_DATA_FAILED);
         }

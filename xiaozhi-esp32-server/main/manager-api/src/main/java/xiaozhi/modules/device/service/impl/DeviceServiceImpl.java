@@ -66,10 +66,14 @@ import xiaozhi.modules.device.vo.UserShowDeviceListVO;
 import xiaozhi.modules.security.user.SecurityUser;
 import xiaozhi.modules.sys.service.SysParamsService;
 import xiaozhi.modules.sys.service.SysUserUtilService;
+import xiaozhi.modules.agent.dao.AgentDao;
+import xiaozhi.modules.agent.entity.AgentEntity;
+import xiaozhi.modules.timbre.dao.TimbreDao;
+import xiaozhi.modules.timbre.entity.TimbreEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @Service
-@AllArgsConstructor
 public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> implements DeviceService {
 
     private final DeviceDao deviceDao;
@@ -78,6 +82,30 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     private final RedisUtils redisUtils;
     private final OtaService otaService;
     private final DeviceAddressBookService deviceAddressBookService;
+    private final AgentDao agentDao;
+    private final TimbreDao timbreDao;
+
+    public DeviceServiceImpl(DeviceDao deviceDao, SysUserUtilService sysUserUtilService,
+            SysParamsService sysParamsService, RedisUtils redisUtils, OtaService otaService,
+            DeviceAddressBookService deviceAddressBookService) {
+        this(deviceDao, sysUserUtilService, sysParamsService, redisUtils, otaService, deviceAddressBookService, null, null);
+    }
+
+    @Autowired
+    public DeviceServiceImpl(DeviceDao deviceDao, SysUserUtilService sysUserUtilService,
+            SysParamsService sysParamsService, RedisUtils redisUtils, OtaService otaService,
+            DeviceAddressBookService deviceAddressBookService,
+            @Autowired(required = false) AgentDao agentDao,
+            @Autowired(required = false) TimbreDao timbreDao) {
+        this.deviceDao = deviceDao;
+        this.sysUserUtilService = sysUserUtilService;
+        this.sysParamsService = sysParamsService;
+        this.redisUtils = redisUtils;
+        this.otaService = otaService;
+        this.deviceAddressBookService = deviceAddressBookService;
+        this.agentDao = agentDao;
+        this.timbreDao = timbreDao;
+    }
 
     @Async
     public void updateDeviceConnectionInfo(String agentId, String deviceId, String appVersion) {
@@ -285,7 +313,9 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
     public List<DeviceEntity> getUserDevices(Long userId, String agentId) {
         QueryWrapper<DeviceEntity> wrapper = new QueryWrapper<>();
         wrapper.eq("user_id", userId);
-        wrapper.eq("agent_id", agentId);
+        if (StringUtils.isNotBlank(agentId) && !"all".equalsIgnoreCase(agentId)) {
+            wrapper.eq("agent_id", agentId);
+        }
         return baseDao.selectList(wrapper);
     }
 
@@ -300,8 +330,35 @@ public class DeviceServiceImpl extends BaseServiceImpl<DeviceDao, DeviceEntity> 
         vo.setDeviceType(device.getBoard());
         vo.setBoard(device.getBoard());
         vo.setAutoUpdate(device.getAutoUpdate());
+        vo.setAgentId(device.getAgentId());
+        vo.setTtsModelId(device.getTtsModelId());
+        vo.setTtsVoiceId(device.getTtsVoiceId());
+        vo.setTtsVolume(device.getTtsVolume());
+        vo.setTtsRate(device.getTtsRate());
+        vo.setTtsPitch(device.getTtsPitch());
         vo.setCreateDateTimestamp(toTimestamp(device.getCreateDate()));
         vo.setLastConnectedAtTimestamp(toTimestamp(device.getLastConnectedAt()));
+
+        AgentEntity agent = null;
+        if (agentDao != null && StringUtils.isNotBlank(device.getAgentId())) {
+            agent = agentDao.selectById(device.getAgentId());
+            if (agent != null) {
+                vo.setAgentName(agent.getAgentName());
+            }
+        }
+
+        String effectiveVoiceId = StringUtils.isNotBlank(device.getTtsVoiceId())
+                ? device.getTtsVoiceId()
+                : (agent != null ? agent.getTtsVoiceId() : null);
+
+        if (timbreDao != null && StringUtils.isNotBlank(effectiveVoiceId)) {
+            TimbreEntity timbre = timbreDao.selectById(effectiveVoiceId);
+            if (timbre != null) {
+                vo.setTtsVoiceName(timbre.getName());
+            } else {
+                vo.setTtsVoiceName(effectiveVoiceId);
+            }
+        }
         return vo;
     }
 

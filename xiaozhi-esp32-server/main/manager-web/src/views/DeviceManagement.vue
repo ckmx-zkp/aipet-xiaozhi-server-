@@ -179,6 +179,24 @@
                 </div>
               </div>
 
+              <!-- 专属音色 -->
+              <div class="info-row voice-row">
+                <span class="info-label">音色:</span>
+                <div class="voice-badge-wrap">
+                  <span
+                    class="voice-tag"
+                    :class="device.ttsVoiceId ? 'custom' : 'inherit'"
+                    :title="device.ttsVoiceId ? `专属音色: ${device.ttsVoiceName || device.ttsVoiceId}` : '跟随智能体默认音色'"
+                  >
+                    <i :class="device.ttsVoiceId ? 'el-icon-microphone' : 'el-icon-user'"></i>
+                    {{ device.ttsVoiceId ? (device.ttsVoiceName || '专属音色') : '跟随智能体' }}
+                  </span>
+                  <button class="edit-voice-icon-btn" @click.stop="openVoiceDialog(device)" title="配置设备专属音色">
+                    <i class="el-icon-setting"></i>
+                  </button>
+                </div>
+              </div>
+
               <!-- 绑定时间与最后对话 -->
               <div class="time-meta-block">
                 <div class="time-item" :title="`绑定时间: ${device.bindTime}`">
@@ -194,6 +212,15 @@
 
             <!-- 卡片底部：操作按钮组 -->
             <div class="card-footer">
+              <button
+                class="card-pill-btn voice-btn"
+                @click="openVoiceDialog(device)"
+                title="设置设备专属音色或跟随智能体"
+              >
+                <i class="el-icon-headset"></i>
+                <span>配置音色</span>
+              </button>
+
               <button
                 v-if="isGenerate(device)"
                 class="card-pill-btn generate-theme-btn"
@@ -256,7 +283,15 @@
               <el-switch v-model="scope.row.otaSwitch" size="mini" active-color="#10b981" inactive-color="#cbd5e1"
                 @change="handleOtaSwitchChange(scope.row)"></el-switch>
             </template>
+            <template slot="ttsVoiceName" slot-scope="scope">
+              <el-tag size="mini" :type="scope.row.ttsVoiceId ? 'primary' : 'info'">
+                {{ scope.row.ttsVoiceId ? (scope.row.ttsVoiceName || '专属音色') : '跟随智能体' }}
+              </el-tag>
+            </template>
             <template slot="operations" slot-scope="scope">
+              <el-button size="mini" type="text" @click="openVoiceDialog(scope.row)">
+                配置音色
+              </el-button>
               <el-button size="mini" type="text" @click="handleUnbind(scope.row.device_id)">
                 {{ $t('device.unbind') }}
               </el-button>
@@ -285,9 +320,11 @@
 
     <!-- 弹窗组件 -->
     <AddDeviceDialog :visible.sync="addDeviceDialogVisible" :agent-id="currentAgentId"
-      @refresh="fetchBindDevices(currentAgentId)" />
+      @refresh="fetchBindDevices(currentAgentId || 'all')" />
     <ManualAddDeviceDialog :visible.sync="manualAddDeviceDialogVisible" :agent-id="currentAgentId"
-      @refresh="fetchBindDevices(currentAgentId)" />
+      @refresh="fetchBindDevices(currentAgentId || 'all')" />
+    <DeviceVoiceDialog :visible.sync="voiceDialogVisible" :device="currentVoiceDevice"
+      @refresh="fetchBindDevices(currentAgentId || 'all')" />
 
     <el-footer>
       <version-footer />
@@ -298,6 +335,7 @@
 <script>
 import Api from '@/apis/api';
 import AddDeviceDialog from "@/components/AddDeviceDialog.vue";
+import DeviceVoiceDialog from "@/components/DeviceVoiceDialog.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
 import ManualAddDeviceDialog from "@/components/ManualAddDeviceDialog.vue";
 import VersionFooter from "@/components/VersionFooter.vue";
@@ -318,6 +356,7 @@ export default {
   components: {
     HeaderBar,
     AddDeviceDialog,
+    DeviceVoiceDialog,
     ManualAddDeviceDialog,
     VersionFooter,
     MacAddressMask,
@@ -329,6 +368,8 @@ export default {
       viewMode: 'card', // 默认卡片视图
       addDeviceDialogVisible: false,
       manualAddDeviceDialogVisible: false,
+      voiceDialogVisible: false,
+      currentVoiceDevice: {},
       selectedDeviceId: '',
       searchKeyword: "",
       activeSearchKeyword: "",
@@ -375,6 +416,7 @@ export default {
       if (this.mqttServiceAvailable) {
         columns.push({ prop: 'deviceStatus', label: this.$t('device.deviceStatus'), align: 'center' });
       }
+      columns.push({ prop: 'ttsVoiceName', label: '生效音色', align: 'center' });
       columns.push({ prop: 'remark', label: this.$t('device.remark'), align: 'center' });
       columns.push({ prop: 'otaSwitch', label: this.$t('device.autoUpdate'), align: 'center' });
       return columns;
@@ -382,9 +424,7 @@ export default {
   },
   mounted() {
     const agentId = this.$route.query.agentId;
-    if (agentId) {
-      this.fetchBindDevices(agentId);
-    }
+    this.fetchBindDevices(agentId || 'all');
   },
   created() {
     this.getFirmwareTypes();
@@ -535,6 +575,10 @@ export default {
       sessionStorage.setItem('devicePath', window.location.href);
       window.location.href = url;
     },
+    openVoiceDialog(device) {
+      this.currentVoiceDevice = device;
+      this.voiceDialogVisible = true;
+    },
     goToPage(page) {
       this.currentPage = page;
     },
@@ -560,6 +604,14 @@ export default {
               isEdit: false,
               _submitting: false,
               otaSwitch: device.autoUpdate === 1,
+              agentId: device.agentId,
+              agentName: device.agentName,
+              ttsModelId: device.ttsModelId,
+              ttsVoiceId: device.ttsVoiceId,
+              ttsVoiceName: device.ttsVoiceName,
+              ttsVolume: device.ttsVolume,
+              ttsRate: device.ttsRate,
+              ttsPitch: device.ttsPitch,
               rawBindTime,
               selected: false,
               deviceStatus: 'offline'
@@ -1124,6 +1176,17 @@ export default {
     cursor: pointer;
     transition: all 0.2s;
 
+    &.voice-btn {
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 1px solid #bbf7d0;
+
+      &:hover {
+        background: #dcfce7;
+        color: #15803d;
+      }
+    }
+
     &.generate-theme-btn {
       background: #eff6ff;
       color: #3b82f6;
@@ -1141,6 +1204,52 @@ export default {
       &:hover {
         background: #fee2e2;
         color: #ef4444;
+      }
+    }
+  }
+}
+
+.voice-row {
+  .voice-badge-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    .voice-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+
+      &.custom {
+        background: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+      }
+
+      &.inherit {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+      }
+    }
+
+    .edit-voice-icon-btn {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      padding: 2px 4px;
+      font-size: 13px;
+      border-radius: 4px;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #3b82f6;
+        background: #eff6ff;
       }
     }
   }

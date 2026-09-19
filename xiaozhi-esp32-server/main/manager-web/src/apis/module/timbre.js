@@ -92,5 +92,21 @@ export default {
                     this.updateVoice(params, callback);
                 });
             }).send();
+    },
+    // 一键导入火山官方音色库
+    importHuoshanVoices(ttsModelId, callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/ttsVoice/import-huoshan?ttsModelId=${ttsModelId || ''}`)
+            .method('POST')
+            .success((res) => {
+                RequestService.clearRequestTime();
+                callback(res);
+            })
+            .networkFail((err) => {
+                console.error('导入火山音色库失败:', err);
+                RequestService.reAjaxFun(() => {
+                    this.importHuoshanVoices(ttsModelId, callback);
+                });
+            }).send();
     }
 }

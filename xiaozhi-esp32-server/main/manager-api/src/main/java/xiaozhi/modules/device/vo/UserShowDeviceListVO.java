@@ -35,6 +35,30 @@ public class UserShowDeviceListVO {
     @Schema(description = "自动更新开关(0关闭/1开启)")
     private Integer autoUpdate;
 
+    @Schema(description = "绑定智能体ID")
+    private String agentId;
+
+    @Schema(description = "绑定智能体名称")
+    private String agentName;
+
+    @Schema(description = "设备专属TTS模型ID")
+    private String ttsModelId;
+
+    @Schema(description = "设备专属音色ID")
+    private String ttsVoiceId;
+
+    @Schema(description = "设备当前生效音色名称")
+    private String ttsVoiceName;
+
+    @Schema(description = "设备专属TTS音量")
+    private Integer ttsVolume;
+
+    @Schema(description = "设备专属TTS语速")
+    private Integer ttsRate;
+
+    @Schema(description = "设备专属TTS音调")
+    private Integer ttsPitch;
+
     @Schema(description = "最近对话时间")
     private String recentChatTime;
 

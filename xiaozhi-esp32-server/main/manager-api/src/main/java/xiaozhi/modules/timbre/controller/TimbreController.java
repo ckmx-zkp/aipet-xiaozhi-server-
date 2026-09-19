@@ -89,4 +89,12 @@ public class TimbreController {
         return new Result<>();
     }
 
+    @PostMapping("/import-huoshan")
+    @Operation(summary = "一键导入火山官方预置音色库")
+    @RequiresPermissions("sys:role:superAdmin")
+    public Result<Integer> importHuoshan(@RequestParam(required = false, defaultValue = "TTS_HuoshanDoubleStreamTTS") String ttsModelId) {
+        int count = timbreService.importHuoshanVoices(ttsModelId);
+        return new Result<Integer>().ok(count);
+    }
+
 }
