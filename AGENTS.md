@@ -34,7 +34,7 @@
 - 上游代码尽量保持原样，二开改动最小化并在 docs 记录；**MCP 工具只做路由，不改协议**。
 - 端口固定：8000=设备 WS，8002=智控台/OTA，8003=视觉/HTTP；与 backend 端口冲突看总看板"待决事项"。
 - 密钥不入库（`api.txt` 已 gitignore）；模型密钥在智控台配置，不写进代码和文档。
-- 模型链路现状：LLM=GLM-4.5-Flash（备用 Kimi K2.7）、ASR=豆包流式 2.0、TTS=火山双向流式·湾湾小何（以总看板为准）。
+- 模型链路现状：对话 LLM=`LLM_DoubaoLLM`（`doubao-seed-2-0-mini-260428`）、视觉 VLLM=MiniMax-M3、ASR=豆包流式 2.0、TTS=火山双向流式·湾湾小何（以总看板为准）。
 - 业务内部接口：仅走内网 `/api/internal/*` 并携带 `X-Internal-Token`；`device_uid` 使用规范化小写冒号 MAC，`session_id` 使用小智连接原生 UUID 字符串。字段与失败降级细节以 `docs/05` 及 backend `docs/06` 为准，禁止在此重复扩展契约。
 - 内部 API 路径以 `docs/05` 与 backend 已确认契约为准；若发现 `/internal/*` 与 `/api/internal/*` 前缀不一致，记录为待决项并等待 backend 统一，禁止自行猜测或双写兼容。
 
