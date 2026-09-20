@@ -153,7 +153,7 @@ public class DeviceController {
         }
         updateWrapper.set(DeviceEntity::getUpdateDate, new Date());
 
-        if (!deviceService.update(updateWrapper)) {
+        if (!deviceService.update(null, updateWrapper)) {
             return new Result<Void>().error(ErrorCode.UPDATE_DATA_FAILED);
         }
         return new Result<Void>();
