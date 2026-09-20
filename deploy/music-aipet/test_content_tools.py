@@ -23,7 +23,7 @@ def answer(text='最终回答', reason='stop'):
 def encoded(data):
     return io.BytesIO(json.dumps(data).encode())
 
-@patch.dict(os.environ, {'MINIMAX_API_KEY':'test-only','MINIMAX_BASE_URL':'https://api.minimax.cn/v1','MINIMAX_SEARCH_MODEL':'MiniMax-M3'})
+@patch.dict(os.environ, {'MINIMAX_API_KEY':'test-only','MINIMAX_BASE_URL':'https://api.minimax.cn/v1','MINIMAX_SEARCH_MODEL':'MiniMax-M3','ARK_API_KEY':'','ARK_BASE_URL':'','ARK_MODEL':''})
 class ContentTests(unittest.TestCase):
     def test_fact_kinds_require_search_then_generation(self):
         for kind in ('zodiac','metaphysics'):
@@ -144,6 +144,38 @@ class ContentTests(unittest.TestCase):
             result=generate_content('chat','主题')
             self.assertFalse(result['success'])
             self.assertEqual(result['next_action'],CHAT_NEXT)
+
+    def test_minimax_rate_limit_falls_back_to_ark(self):
+        env={'ARK_API_KEY':'ark-test','ARK_BASE_URL':'https://ark.cn-beijing.volces.com/api/v3','ARK_MODEL':'deepseek-v4-flash-ga-260731'}
+        with patch.dict(os.environ, env), patch('urllib.request.urlopen', side_effect=[HTTPError('url',429,'secret',{},None), encoded(answer('方舟笑话'))]) as call:
+            result=generate_content('chat','笑话')
+        self.assertTrue(result['success'])
+        self.assertEqual(result['content'],'方舟笑话')
+        self.assertEqual(result['model'],'deepseek-v4-flash-ga-260731')
+        self.assertEqual(result['search']['fallback'],'ark')
+        self.assertEqual(result['search']['provider'],'ark')
+        self.assertEqual(call.call_count,2)
+        self.assertTrue(call.call_args_list[1].args[0].full_url.endswith('/api/v3/chat/completions'))
+        body=json.loads(call.call_args_list[1].args[0].data)
+        self.assertEqual(body['thinking'],{'type':'disabled'})
+        self.assertNotIn('secret',str(result))
+
+    def test_ark_only_when_minimax_missing(self):
+        env={'MINIMAX_API_KEY':'','ARK_API_KEY':'ark-test','ARK_BASE_URL':'https://ark.cn-beijing.volces.com/api/v3','ARK_MODEL':'deepseek-v4-flash-ga-260731'}
+        with patch.dict(os.environ, env), patch('urllib.request.urlopen', side_effect=[encoded(answer('只走方舟'))]) as call:
+            result=generate_content('chat','故事')
+        self.assertTrue(result['success'])
+        self.assertEqual(result['search']['provider'],'ark')
+        self.assertEqual(call.call_count,1)
+
+    def test_fact_search_unavailable_falls_back_without_claiming_search(self):
+        env={'ARK_API_KEY':'ark-test','ARK_BASE_URL':'https://ark.cn-beijing.volces.com/api/v3','ARK_MODEL':'deepseek-v4-flash-ga-260731'}
+        with patch.dict(os.environ, env), patch('urllib.request.urlopen', side_effect=[HTTPError('url',429,'secret',{},None), encoded(answer('未联网的娱乐运势'))]):
+            result=generate_content('zodiac','天蝎座')
+        self.assertTrue(result['success'])
+        self.assertFalse(result['search']['executed'])
+        self.assertEqual(result['search']['fallback'],'ark')
+        self.assertIn('不要声称已经联网检索', result['next_action'])
 
     def test_generation_truncation_rejected(self):
         with patch('urllib.request.urlopen',side_effect=[encoded(answer(reason='length'))]):

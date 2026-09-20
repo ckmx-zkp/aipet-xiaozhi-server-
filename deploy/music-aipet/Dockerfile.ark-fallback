@@ -1,0 +1,2 @@
+FROM xiaozhi-music-aipet:20260920-entertain
+COPY content_tools.py /srv/music/
