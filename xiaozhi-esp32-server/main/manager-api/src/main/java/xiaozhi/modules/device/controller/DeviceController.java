@@ -125,12 +125,21 @@ public class DeviceController {
             return new Result<Void>().error("设备不存在");
         }
         BeanUtils.copyProperties(deviceUpdateDTO, entity);
-        // 如果 ttsVoiceId 为空字符串，显式置为 null（表示跟随智能体默认音色）
-        if (deviceUpdateDTO.getTtsVoiceId() != null && deviceUpdateDTO.getTtsVoiceId().trim().isEmpty()) {
+        // 如果音色或模型为空，显式置为 null（表示跟随智能体默认音色）
+        if (StringUtils.isBlank(deviceUpdateDTO.getTtsVoiceId())) {
             entity.setTtsVoiceId(null);
         }
-        if (deviceUpdateDTO.getTtsModelId() != null && deviceUpdateDTO.getTtsModelId().trim().isEmpty()) {
+        if (StringUtils.isBlank(deviceUpdateDTO.getTtsModelId())) {
             entity.setTtsModelId(null);
+        }
+        if (deviceUpdateDTO.getTtsVolume() == null) {
+            entity.setTtsVolume(null);
+        }
+        if (deviceUpdateDTO.getTtsRate() == null) {
+            entity.setTtsRate(null);
+        }
+        if (deviceUpdateDTO.getTtsPitch() == null) {
+            entity.setTtsPitch(null);
         }
         if (!deviceService.updateById(entity)) {
             return new Result<Void>().error(ErrorCode.UPDATE_DATA_FAILED);

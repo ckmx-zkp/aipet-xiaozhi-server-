@@ -3,6 +3,7 @@ package xiaozhi.modules.device.entity;
 import java.util.Date;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -50,18 +51,23 @@ public class DeviceEntity {
     private Integer sort;
 
     @Schema(description = "设备专属TTS模型ID，为空则跟随智能体")
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String ttsModelId;
 
     @Schema(description = "设备专属音色ID，为空则跟随智能体")
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String ttsVoiceId;
 
     @Schema(description = "设备专属TTS音量")
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer ttsVolume;
 
     @Schema(description = "设备专属TTS语速")
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer ttsRate;
 
     @Schema(description = "设备专属TTS音调")
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer ttsPitch;
 
     @Schema(description = "更新者")

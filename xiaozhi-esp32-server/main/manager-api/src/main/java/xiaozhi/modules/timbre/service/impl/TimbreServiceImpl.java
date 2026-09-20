@@ -342,7 +342,11 @@ public class TimbreServiceImpl extends BaseServiceImpl<TimbreDao, TimbreEntity> 
                 timbreDao.updateById(entity);
             } else {
                 TimbreEntity entity = new TimbreEntity();
-                entity.setId(targetModelId + "_" + String.format("%04d", baseSort));
+                String candidateId = targetModelId + "_" + String.format("%04d", baseSort);
+                if (timbreDao.selectById(candidateId) != null) {
+                    candidateId = targetModelId + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+                }
+                entity.setId(candidateId);
                 entity.setTtsModelId(targetModelId);
                 entity.setTtsVoice(voiceCode);
                 entity.setName(name);
