@@ -1,7 +1,10 @@
 package xiaozhi.modules.device.controller;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
@@ -124,24 +127,33 @@ public class DeviceController {
         if (!entity.getUserId().equals(user.getId())) {
             return new Result<Void>().error("设备不存在");
         }
-        BeanUtils.copyProperties(deviceUpdateDTO, entity);
-        // 如果音色或模型为空，显式置为 null（表示跟随智能体默认音色）
-        if (StringUtils.isBlank(deviceUpdateDTO.getTtsVoiceId())) {
-            entity.setTtsVoiceId(null);
+
+        LambdaUpdateWrapper<DeviceEntity> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(DeviceEntity::getId, id);
+
+        if (deviceUpdateDTO.getAlias() != null) {
+            updateWrapper.set(DeviceEntity::getAlias, deviceUpdateDTO.getAlias());
         }
-        if (StringUtils.isBlank(deviceUpdateDTO.getTtsModelId())) {
-            entity.setTtsModelId(null);
+        if (deviceUpdateDTO.getAutoUpdate() != null) {
+            updateWrapper.set(DeviceEntity::getAutoUpdate, deviceUpdateDTO.getAutoUpdate());
         }
-        if (deviceUpdateDTO.getTtsVolume() == null) {
-            entity.setTtsVolume(null);
+        if (deviceUpdateDTO.getAgentId() != null) {
+            updateWrapper.set(DeviceEntity::getAgentId, deviceUpdateDTO.getAgentId());
         }
-        if (deviceUpdateDTO.getTtsRate() == null) {
-            entity.setTtsRate(null);
+
+        // 专属音色与语音参数支持设置和置空回退（空字符串或 null 均置为 null）
+        if (deviceUpdateDTO.getTtsVoiceId() != null || deviceUpdateDTO.getTtsModelId() != null
+                || deviceUpdateDTO.getTtsVolume() != null || deviceUpdateDTO.getTtsRate() != null
+                || deviceUpdateDTO.getTtsPitch() != null) {
+            updateWrapper.set(DeviceEntity::getTtsModelId, StringUtils.isBlank(deviceUpdateDTO.getTtsModelId()) ? null : deviceUpdateDTO.getTtsModelId());
+            updateWrapper.set(DeviceEntity::getTtsVoiceId, StringUtils.isBlank(deviceUpdateDTO.getTtsVoiceId()) ? null : deviceUpdateDTO.getTtsVoiceId());
+            updateWrapper.set(DeviceEntity::getTtsVolume, deviceUpdateDTO.getTtsVolume());
+            updateWrapper.set(DeviceEntity::getTtsRate, deviceUpdateDTO.getTtsRate());
+            updateWrapper.set(DeviceEntity::getTtsPitch, deviceUpdateDTO.getTtsPitch());
         }
-        if (deviceUpdateDTO.getTtsPitch() == null) {
-            entity.setTtsPitch(null);
-        }
-        if (!deviceService.updateById(entity)) {
+        updateWrapper.set(DeviceEntity::getUpdateDate, new Date());
+
+        if (!deviceService.update(updateWrapper)) {
             return new Result<Void>().error(ErrorCode.UPDATE_DATA_FAILED);
         }
         return new Result<Void>();
