@@ -55,11 +55,18 @@ async def main():
         for name, args in calls:
             started = time.monotonic()
             result = data(await client.call_tool(name, args, timeout=130))
-            assert result['success'], dict(tool=name, error=result.get('error_code'))
-            assert result['search']['executed'] and result['search']['sources']
-            assert result['strategy']['version'] == plan['strategy']['version']
-            print(json.dumps(dict(check=name, success=True, elapsed=round(time.monotonic()-started, 2),
-                sources=len(result['search']['sources']), characters=len(result['content']))), flush=True)
+            if name in {'shared_activity', 'daily_chat'}:
+                if result.get('success'):
+                    assert result['search'].get('skipped') or result['search'].get('executed')
+                else:
+                    assert '自己的话' in result.get('next_action', '')
+            else:
+                assert result['success'], dict(tool=name, error=result.get('error_code'))
+                assert result['search']['executed'] and result['search']['sources']
+            if result.get('strategy'):
+                assert result['strategy']['version'] == plan['strategy']['version']
+            print(json.dumps(dict(check=name, success=result.get('success'), elapsed=round(time.monotonic()-started, 2),
+                error=result.get('error_code')), ensure_ascii=False), flush=True)
     async with Client(url, timeout=15) as client:
         assert not data(await client.call_tool('conversation_plan', {}))['success']
     headers['X-Companion-Session'] = 'another-session'

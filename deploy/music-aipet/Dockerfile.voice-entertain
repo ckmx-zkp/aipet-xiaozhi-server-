@@ -1,0 +1,2 @@
+FROM xiaozhi-aipet-server:v0.9.6-b16-services-r2
+COPY companion_scope.py /opt/xiaozhi-esp32-server/core/providers/tools/server_mcp/companion_scope.py

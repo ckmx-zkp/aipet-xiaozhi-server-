@@ -17,6 +17,12 @@ assert result['headers']['X-Companion-Token'] == 'unit-secret'
 assert result['headers']['ordinary'] == 'retained'
 assert 'x-companion-device' not in result['headers']
 assert config['headers']['x-companion-device'] == 'forged'
+assert '讲故事' in module.COMPANION_HINT
+assert '说笑话' in module.COMPANION_HINT
+assert '不要调用daily_chat' in module.COMPANION_HINT
+assert 'zodiac_fortune' in module.COMPANION_HINT
+assert '必须取得成功的真实联网结果' in module.COMPANION_HINT
+assert '日常聊天调用companion_reply或daily_chat' not in module.COMPANION_HINT
 assert module.bind_companion_scope('unrelated', config, conn) is config
 manager = (source / 'mcp_manager.py').read_text(encoding='utf-8')
 assert manager.count('ServerMCPClient(bind_companion_scope(') == 2

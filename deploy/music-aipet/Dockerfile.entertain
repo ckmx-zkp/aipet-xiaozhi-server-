@@ -1,0 +1,2 @@
+FROM xiaozhi-music-aipet:20260908-companion
+COPY content_tools.py companion_tools.py /srv/music/
