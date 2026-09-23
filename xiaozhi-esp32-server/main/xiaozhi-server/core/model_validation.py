@@ -127,8 +127,12 @@ async def doubao_asr(c):
         fail("缺少合成语音测试样本", "unknown")
     with wave.open(str(sample), "rb") as f:
         pcm = f.readframes(f.getnframes())
-    headers = {"X-Api-App-Key": str(c["appid"]), "X-Api-Access-Key": c["access_token"],
-               "X-Api-Resource-Id": c.get("resource_id", "volc.bigasr.sauc.duration"), "X-Api-Connect-Id": str(uuid.uuid4())}
+    headers = {"X-Api-Resource-Id": c.get("resource_id", "volc.bigasr.sauc.duration"),
+               "X-Api-Connect-Id": str(uuid.uuid4())}
+    if c.get("auth_method") == "api_key":
+        headers["X-Api-Key"] = c["api_key"]
+    else:
+        headers.update({"X-Api-App-Key": str(c["appid"]), "X-Api-Access-Key": c["access_token"]})
     suffix = "bigmodel_nostream" if str(c.get("enable_multilingual", False)).lower() == "true" else "bigmodel_async"
     async with websockets.connect("wss://openspeech.bytedance.com/api/v3/sauc/" + suffix, additional_headers=headers, open_timeout=8, close_timeout=1) as ws:
         body = {"user": {"uid": "model-validation"}, "audio": {"format": "pcm", "codec": "raw", "rate": 16000, "bits": 16, "channel": 1}, "request": {"model_name": "bigmodel", "enable_itn": True, "show_utterances": True}}

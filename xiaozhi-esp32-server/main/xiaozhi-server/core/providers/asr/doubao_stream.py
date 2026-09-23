@@ -29,6 +29,7 @@ class ASRProvider(ASRProviderBase):
         # 配置参数
         self.appid = str(config.get("appid"))
         self.access_token = config.get("access_token")
+        self.api_key = config.get("api_key")
         # 资源ID，用于区分不同的ASR模型（默认1.0模型小时版，v2版本使用seed-asr）
         self.resource_id = config.get("resource_id", "volc.bigasr.sauc.duration")
 
@@ -75,8 +76,10 @@ class ASRProvider(ASRProviderBase):
             try:
                 self.is_processing = True
                 # 建立新的WebSocket连接
-                headers = self.token_auth() if self.auth_method == "token" else None
-                logger.bind(tag=TAG).info(f"正在连接ASR服务，headers: {headers}")
+                headers = self.token_auth() if self.auth_method in ("token", "api_key") else None
+                logger.bind(tag=TAG).info(
+                    f"正在连接ASR服务，auth_method={self.auth_method}，resource_id={self.resource_id}"
+                )
 
                 self.asr_ws = await websockets.connect(
                     self.ws_url,
@@ -283,10 +286,6 @@ class ASRProvider(ASRProviderBase):
 
     def construct_request(self, reqid):
         req = {
-            "app": {
-                "appid": self.appid,
-                "token": self.access_token,
-            },
             "user": {"uid": self.uid},
             "request": {
                 "reqid": reqid,
@@ -309,17 +308,25 @@ class ASRProvider(ASRProviderBase):
                 "sample_rate": self.rate,
             },
         }
+        if self.auth_method == "token":
+            req["app"] = {"appid": self.appid, "token": self.access_token}
 
         # language参数仅在多语种模式下添加
         if self.enable_multilingual and self.language:
             req["audio"]["language"] = self.language
 
         logger.bind(tag=TAG).debug(
-            f"构造请求参数: {json.dumps(req, ensure_ascii=False)}"
+            f"构造请求参数: auth_method={self.auth_method}，resource_id={self.resource_id}"
         )
         return req
 
     def token_auth(self):
+        if self.auth_method == "api_key":
+            return {
+                "X-Api-Key": self.api_key,
+                "X-Api-Resource-Id": self.resource_id,
+                "X-Api-Connect-Id": str(uuid.uuid4()),
+            }
         return {
             "X-Api-App-Key": self.appid,
             "X-Api-Access-Key": self.access_token,
