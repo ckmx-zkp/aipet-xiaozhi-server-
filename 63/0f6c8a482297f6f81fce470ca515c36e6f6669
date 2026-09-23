@@ -1,0 +1,26 @@
+docs/08-部署配置基线与运维.md
+  s_15ffd0975ef2d6::t_9fff89081db076 3-5,8
+  s_15ffd0975ef2d6::t_abd5b38d2c5cb5 6-7
+xiaozhi-esp32-server/main/xiaozhi-server/core/model_validation.py
+  s_15ffd0975ef2d6::t_5151497c02da4f 130-135
+xiaozhi-esp32-server/main/xiaozhi-server/core/providers/asr/doubao_stream.py
+  s_15ffd0975ef2d6::t_57e425d44dc15f 32,79-81,324-329
+  s_15ffd0975ef2d6::t_7ae90a9abb6076 311-312,319
+  s_15ffd0975ef2d6::t_1d060cbdcb6755 82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "630f6c8a482297f6f81fce470ca515c36e6f6669",
+  "prompts": {},
+  "sessions": {
+    "s_15ffd0975ef2d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0cd1d-992f-70e1-ba9c-7957b41cb103",
+        "model": "gpt-6-sol"
+      },
+      "human_author": "kunpeng2.zhang <kunpeng2.zhang@ly.com>"
+    }
+  }
+}
