@@ -251,12 +251,11 @@ class ConnectionHandler:
         )
         return any(keyword and keyword in user_text for keyword in keywords)
 
-    async def close_for_rest(self):
-        """Speak one short confirmation, then close this WebSocket session.
+    async def close_for_rest(self, text=None):
+        """Speak one short line, then close this WebSocket session.
 
-        This intentionally bypasses the follow-up LLM turn after ``self_eye_close``.
-        Otherwise the model may continue with a long farewell while the device has
-        already entered its sleep pose.
+        This intentionally bypasses another LLM turn. An instruction prompt would
+        be narrated aloud, including the model's notes about how to say goodbye.
         """
         if self.close_after_chat:
             return
@@ -269,7 +268,8 @@ class ConnectionHandler:
             await self.close()
             return
 
-        text = self.config.get("rest_close_confirmation", "晚安，先休息啦。")
+        if not text:
+            text = self.config.get("rest_close_confirmation", "晚安，先休息啦。")
         self.sentence_id = uuid.uuid4().hex
         self.tts.store_tts_text(self.sentence_id, text)
         self.tts.tts_text_queue.put(

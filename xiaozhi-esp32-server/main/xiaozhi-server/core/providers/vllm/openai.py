@@ -1,8 +1,18 @@
 import openai
 import json
+from urllib.parse import urlparse
 from config.logger import setup_logging
 from core.utils.util import check_model_key
 from core.providers.vllm.base import VLLMProviderBase
+
+# 与对话模型一致：视觉回复不把思考过程交给设备去念。
+THINKING_DISABLED_DOMAINS = {
+    "aliyuncs.com": {"enable_thinking": False},
+    "bigmodel.cn": {"thinking": {"type": "disabled"}},
+    "moonshot.cn": {"thinking": {"type": "disabled"}},
+    "volces.com": {"thinking": {"type": "disabled"}},
+    "minimaxi.com": {"reasoning_effort": "low", "reasoning_split": True, "thinking": {"type": "disabled"}},
+}
 
 TAG = __name__
 logger = setup_logging()
@@ -39,27 +49,39 @@ class VLLMProvider(VLLMProviderBase):
             logger.bind(tag=TAG).error(model_key_msg)
         self.client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
 
-    def response(self, question, base64_image):
-        question = question + "(请使用中文回复)"
+    def response(self, question, base64_image, reference_images=None, max_tokens=None):
         try:
-            messages = [
+            content = [
+                {"type": "text", "text": question},
                 {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": question},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            },
-                        },
-                    ],
-                }
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                },
             ]
+            for reference in reference_images or []:
+                content.append({"type": "text", "text": "下面这张是主人参考照，只用于认人。"})
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": reference},
+                    }
+                )
+            messages = [{"role": "user", "content": content}]
+            limit = self.max_tokens if max_tokens is None else max_tokens
+            request = {
+                "model": self.model_name,
+                "messages": messages,
+                "stream": False,
+                "max_tokens": limit,
+                "temperature": min(self.temperature, 0.4),
+            }
+            parsed = urlparse(self.base_url or "")
+            for domain, extra in THINKING_DISABLED_DOMAINS.items():
+                if domain in parsed.netloc:
+                    request.setdefault("extra_body", {}).update(extra)
+                    break
 
-            response = self.client.chat.completions.create(
-                model=self.model_name, messages=messages, stream=False
-            )
+            response = self.client.chat.completions.create(**request)
 
             if getattr(response, "usage", None):
                 u = response.usage
@@ -77,7 +99,8 @@ class VLLMProvider(VLLMProviderBase):
                 except Exception:
                     pass
 
-            return response.choices[0].message.content
+            message = response.choices[0].message
+            return getattr(message, "content", "") or ""
 
         except Exception as e:
             logger.bind(tag=TAG).error(f"Error in response generation: {e}")

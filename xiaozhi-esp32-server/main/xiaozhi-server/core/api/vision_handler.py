@@ -1,5 +1,7 @@
 import json
 import copy
+import os
+import re
 from aiohttp import web
 from config.logger import setup_logging
 from core.api.base_handler import BaseHandler
@@ -15,6 +17,67 @@ TAG = __name__
 
 # 设置最大文件大小为5MB
 MAX_FILE_SIZE = 5 * 1024 * 1024
+OWNER_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+OWNER_PHOTO_LIMIT = 3
+SPOKEN_MAX_CHARS = 48
+
+
+def _spoken_question(has_owner):
+    """视觉结果会直接送去朗读，不经过第二轮对话模型。"""
+    lines = [
+        "你在当面跟这个人说话。只输出一句口语，不超过30个字。",
+        "说说他现在在做什么，或身边最显眼的一件事。",
+        "像这样说：我看到啦，你好像在喝水是吧。",
+        "不要标题、列表、Markdown，不要逐条讲五官、年龄、发型和衣服。",
+        "不要输出思考过程。看不清就说看不清。",
+    ]
+    if has_owner:
+        lines.append(
+            "后面几张是主人参考照。认出来是主人就称呼主人，不要介绍主人长什么样。"
+            "不是主人就说看到别人，同样只说对方在做什么。"
+        )
+    return "\n".join(lines)
+
+
+def _load_owner_photos(directory):
+    if not directory or not os.path.isdir(directory):
+        return []
+    paths = []
+    for name in sorted(os.listdir(directory)):
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in OWNER_PHOTO_EXTENSIONS:
+            continue
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path):
+            continue
+        if os.path.getsize(path) > MAX_FILE_SIZE:
+            continue
+        paths.append(path)
+        if len(paths) >= OWNER_PHOTO_LIMIT:
+            break
+    photos = []
+    for path in paths:
+        ext = os.path.splitext(path)[1].lower().lstrip(".")
+        mime = "jpeg" if ext == "jpg" else ext
+        with open(path, "rb") as handle:
+            encoded = base64.b64encode(handle.read()).decode("utf-8")
+        photos.append(f"data:image/{mime};base64,{encoded}")
+    return photos
+
+
+def _to_spoken_line(text):
+    if not text:
+        return "我看不太清，你再靠近一点。"
+    cleaned = re.sub(r"<think>.*?</think>", " ", text, flags=re.S | re.I)
+    cleaned = re.sub(r"[#>*`]+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \n\r\t-—:：")
+    for mark in ("。", "！", "？", "!", "?"):
+        index = cleaned.find(mark)
+        if 0 <= index <= SPOKEN_MAX_CHARS:
+            return cleaned[: index + 1]
+    if len(cleaned) > SPOKEN_MAX_CHARS:
+        return cleaned[:SPOKEN_MAX_CHARS].rstrip("，,、 ") + "。"
+    return cleaned
 
 
 class VisionHandler(BaseHandler):
@@ -127,7 +190,17 @@ class VisionHandler(BaseHandler):
                 vllm_type, current_config["VLLM"][select_vllm_module]
             )
 
-            result = vllm.response(question, image_base64)
+            # 主人照放在进程配置里，不跟智控台下发的模型配置走。
+            server_config = self.config.get("server", {})
+            owner_dir = server_config.get("owner_photo_dir", "data/owner_photos")
+            owner_photos = _load_owner_photos(owner_dir)
+            if owner_photos:
+                self.logger.bind(tag=TAG).info(f"识图带上主人参考照 {len(owner_photos)} 张")
+            spoken = _spoken_question(bool(owner_photos))
+            result = vllm.response(
+                spoken, image_base64, reference_images=owner_photos, max_tokens=80
+            )
+            result = _to_spoken_line(result)
 
             return_json = {
                 "success": True,

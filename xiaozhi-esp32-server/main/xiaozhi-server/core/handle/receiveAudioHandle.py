@@ -41,6 +41,9 @@ async def resume_vad_detection(conn: "ConnectionHandler"):
 
 
 async def startToChat(conn: "ConnectionHandler", text):
+    if conn.close_after_chat:
+        conn.logger.bind(tag=TAG).info("会话正在退出，忽略新的语音")
+        return
     # 检查输入是否是JSON格式（包含说话人信息）
     speaker_name = None
     actual_text = text
@@ -121,17 +124,17 @@ async def no_voice_close_connect(conn: "ConnectionHandler", have_voice):
             not conn.close_after_chat
             and no_voice_time > 1000 * close_connection_no_voice_time
         ):
-            conn.close_after_chat = True
-            conn.client_abort = False
-            end_prompt = conn.config.get("end_prompt", {})
-            if end_prompt and end_prompt.get("enable", True) is False:
+            end_prompt = conn.config.get("end_prompt", {}) or {}
+            if end_prompt.get("enable", True) is False:
+                conn.close_after_chat = True
+                conn.client_abort = False
                 conn.logger.bind(tag=TAG).info("结束对话，无需发送结束提示语")
                 await conn.close()
                 return
-            prompt = end_prompt.get("prompt")
-            if not prompt:
-                prompt = "请你以```时间过得真快```未来头，用富有感情、依依不舍的话来结束这场对话吧。！"
-            await startToChat(conn, prompt)
+            # 不把结束说明交给模型。说明会被当成正文念出来。
+            text = end_prompt.get("line") or "时间过得真快，先这样啦，下次再聊。"
+            conn.logger.bind(tag=TAG).info("无语音超时，播一句告别后断开")
+            await conn.close_for_rest(text)
 
 
 async def max_out_size(conn: "ConnectionHandler"):

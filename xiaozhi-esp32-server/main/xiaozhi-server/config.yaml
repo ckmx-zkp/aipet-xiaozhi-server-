@@ -25,6 +25,9 @@ server:
   # 所以如果你使用docker部署时，将vision_explain设置成局域网地址
   # 如果你使用公网部署时，将vision_explain设置成公网地址
   vision_explain: http://你的ip或者域名:端口号/mcp/vision/explain
+  # 主人参考照目录，相对语音服务工作目录。放 1–3 张正脸 jpg/png/webp，文件不入库。
+  # 识图时和现场照片一起送给视觉模型认人；认出来只说在做什么，不报外貌。
+  owner_photo_dir: data/owner_photos
   # OTA返回信息时区偏移量
   timezone_offset: +8
   # 认证配置
@@ -94,6 +97,19 @@ tts_audio_send_delay: 0
 exit_commands:
   - "退出"
   - "关闭"
+  - "再见"
+  - "拜拜"
+  - "不想聊了"
+  - "结束对话"
+  - "别说了"
+  - "休息"
+  - "休息吧"
+  - "晚安"
+  - "睡觉"
+  - "睡觉吧"
+  - "去睡觉"
+  - "睡了"
+  - "睡吧"
 
 xiaozhi:
   type: hello
@@ -231,12 +247,10 @@ prompt_template: agent-base-prompt.txt
 # 系统错误时的回复
 system_error_response: "主人，小智现在有点忙，我们稍后再试吧。"
 
-# 结束语prompt
+# 长时间没说话时直接播这一句再断开。不要写成给模型的说明，说明会被念出来。
 end_prompt:
-  enable: true # 是否开启结束语
-  # 结束语
-  prompt: |
-    请你以"时间过得真快"未来头，用富有感情、依依不舍的话来结束这场对话吧！
+  enable: true
+  line: "时间过得真快，先这样啦，下次再聊。"
 
 # 具体处理时选择的模块(The module selected for specific processing)
 selected_module:

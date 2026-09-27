@@ -7,6 +7,6 @@ logger = setup_logging()
 
 class VLLMProviderBase(ABC):
     @abstractmethod
-    def response(self, question, base64_image):
+    def response(self, question, base64_image, reference_images=None, max_tokens=None):
         """VLLM response generator"""
         pass

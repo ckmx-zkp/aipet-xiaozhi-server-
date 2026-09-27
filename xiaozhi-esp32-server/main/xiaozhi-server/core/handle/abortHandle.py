@@ -8,6 +8,10 @@ TAG = __name__
 
 async def handleAbortMessage(conn: "ConnectionHandler"):
     conn.logger.bind(tag=TAG).info("Abort message received")
+    # 退出流程已经决定关连接。打断只用于插话，不能把这次退出取消掉。
+    if conn.close_after_chat:
+        conn.logger.bind(tag=TAG).info("忽略打断，会话正在退出")
+        return
     # 设置成打断状态，会自动打断llm、tts任务
     conn.close_after_chat = False
     conn.client_abort = True

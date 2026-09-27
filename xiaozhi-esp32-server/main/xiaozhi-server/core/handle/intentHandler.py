@@ -52,13 +52,76 @@ async def handle_user_intent(conn: "ConnectionHandler", text, turn_id=None):
     return await process_intent_result(conn, intent_result, text, turn_id=turn_id)
 
 
+_EXIT_EXACT = (
+    "退出",
+    "关闭",
+    "再见",
+    "拜拜",
+    "不想聊了",
+    "结束对话",
+    "别说了",
+    "我要退出",
+)
+
+# 先说一句确认，再闭眼并结束会话。不要在识别到的当下直接断开。
+_REST_EXACT = (
+    "休息",
+    "休息吧",
+    "晚安",
+    "睡觉",
+    "睡觉吧",
+    "去睡觉",
+    "睡了",
+    "睡吧",
+    "我要休息",
+    "我想休息",
+    "我要睡觉",
+    "我想睡觉",
+    "好了休息吧",
+)
+
+
+def _matches_exit_command(text: str, cmd: str) -> bool:
+    if not text or not cmd:
+        return False
+    if text == cmd:
+        return True
+    # “关闭”单独出现才退出，避免“关闭眼睛”被当成挂断。
+    if cmd == "关闭":
+        return False
+    return len(text) <= 8 and cmd in ("退出", "再见", "拜拜") and cmd in text
+
+
+async def _begin_rest(conn: "ConnectionHandler", text: str):
+    """闭眼，播一句确认，这句话结束后再断开。"""
+    conn.logger.bind(tag=TAG).info(f"识别到休息: {text}")
+    conn.current_user_text = text
+    handler = getattr(conn, "func_handler", None)
+    if handler and handler.has_tool("self_eye_close"):
+        try:
+            result = await handler.tool_manager.execute_tool("self_eye_close", {})
+            if result and result.action != Action.ERROR:
+                conn.update_peripheral_state_from_tool("self_eye_close", {})
+        except Exception as error:
+            conn.logger.bind(tag=TAG).warning(f"休息闭眼失败: {error}")
+    await send_stt_message(conn, text)
+    await conn.close_for_rest()
+
+
 async def check_direct_exit(conn: "ConnectionHandler", text):
-    """检查是否有明确的退出命令"""
+    """检查是否有明确的退出命令。短句里的退出/再见也算，不必等模型调用工具。"""
     _, text = remove_punctuation_and_length(text)
-    cmd_exit = conn.cmd_exit
-    for cmd in cmd_exit:
-        if text == cmd:
+    if text in _REST_EXACT:
+        await _begin_rest(conn, text)
+        return True
+    commands = [cmd for cmd in (conn.cmd_exit or []) if cmd not in _REST_EXACT]
+    for cmd in _EXIT_EXACT:
+        if cmd not in commands:
+            commands.append(cmd)
+    for cmd in commands:
+        if _matches_exit_command(text, cmd):
             conn.logger.bind(tag=TAG).info(f"识别到明确的退出命令: {text}")
+            conn.close_after_chat = True
             await send_stt_message(conn, text)
             await conn.close()
             return True
