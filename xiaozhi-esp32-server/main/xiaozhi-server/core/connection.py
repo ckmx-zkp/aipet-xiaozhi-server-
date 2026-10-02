@@ -243,13 +243,20 @@ class ConnectionHandler:
         return turn_id
 
     def should_close_for_rest(self):
-        """Return true only for a rest/sleep request that closed the eyes."""
+        """当前这句是休息、睡觉或晚安，会话应在确认语后结束。"""
         user_text = getattr(self, "current_user_text", "")
         keywords = self.config.get(
             "rest_close_keywords",
             ["休息", "睡觉", "睡了", "晚安", "去睡", "睡吧"],
         )
         return any(keyword and keyword in user_text for keyword in keywords)
+
+    def should_keep_eyes_open_for_rest(self):
+        """休息时不闭眼。同一句里明确说闭眼、闭上时仍允许闭眼。"""
+        if not self.should_close_for_rest():
+            return False
+        text = getattr(self, "current_user_text", "") or ""
+        return "闭眼" not in text and "闭上" not in text
 
     async def close_for_rest(self, text=None):
         """Speak one short line, then close this WebSocket session.

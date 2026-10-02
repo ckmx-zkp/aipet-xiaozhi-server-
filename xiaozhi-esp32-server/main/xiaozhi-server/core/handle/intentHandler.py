@@ -63,7 +63,7 @@ _EXIT_EXACT = (
     "我要退出",
 )
 
-# 先说一句确认，再闭眼并结束会话。不要在识别到的当下直接断开。
+# 先说一句确认，再结束会话。休息不闭眼。不要在识别到的当下直接断开。
 _REST_EXACT = (
     "休息",
     "休息吧",
@@ -93,17 +93,9 @@ def _matches_exit_command(text: str, cmd: str) -> bool:
 
 
 async def _begin_rest(conn: "ConnectionHandler", text: str):
-    """闭眼，播一句确认，这句话结束后再断开。"""
+    """播一句确认，这句话结束后再断开。眼睛保持当前状态。"""
     conn.logger.bind(tag=TAG).info(f"识别到休息: {text}")
     conn.current_user_text = text
-    handler = getattr(conn, "func_handler", None)
-    if handler and handler.has_tool("self_eye_close"):
-        try:
-            result = await handler.tool_manager.execute_tool("self_eye_close", {})
-            if result and result.action != Action.ERROR:
-                conn.update_peripheral_state_from_tool("self_eye_close", {})
-        except Exception as error:
-            conn.logger.bind(tag=TAG).warning(f"休息闭眼失败: {error}")
     await send_stt_message(conn, text)
     await conn.close_for_rest()
 

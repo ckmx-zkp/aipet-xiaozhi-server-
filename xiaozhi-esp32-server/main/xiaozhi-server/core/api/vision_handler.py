@@ -22,14 +22,15 @@ OWNER_PHOTO_LIMIT = 3
 SPOKEN_MAX_CHARS = 48
 
 
-def _spoken_question(has_owner):
+def _spoken_question(has_owner, question):
     """视觉结果会直接送去朗读，不经过第二轮对话模型。"""
+    focus = (question or "").strip() or "他现在在做什么"
     lines = [
-        "你在当面跟这个人说话。只输出一句口语，不超过30个字。",
-        "说说他现在在做什么，或身边最显眼的一件事。",
-        "像这样说：我看到啦，你好像在喝水是吧。",
-        "不要标题、列表、Markdown，不要逐条讲五官、年龄、发型和衣服。",
-        "不要输出思考过程。看不清就说看不清。",
+        "你在当面跟这个人说话。只输出一句口语，不超过20个字。",
+        f"只回答用户问的这件事：{focus}",
+        "不要描述问题没问到的东西，不要讲背景、桌子上的其他物品、外貌和衣服。",
+        "像这样说：看到了，是一盒纯牛奶。或：我看到啦，你好像在喝水。",
+        "不要标题、列表、Markdown。看不清就说看不清。",
     ]
     if has_owner:
         lines.append(
@@ -196,9 +197,9 @@ class VisionHandler(BaseHandler):
             owner_photos = _load_owner_photos(owner_dir)
             if owner_photos:
                 self.logger.bind(tag=TAG).info(f"识图带上主人参考照 {len(owner_photos)} 张")
-            spoken = _spoken_question(bool(owner_photos))
+            spoken = _spoken_question(bool(owner_photos), question)
             result = vllm.response(
-                spoken, image_base64, reference_images=owner_photos, max_tokens=80
+                spoken, image_base64, reference_images=owner_photos, max_tokens=40
             )
             result = _to_spoken_line(result)
 

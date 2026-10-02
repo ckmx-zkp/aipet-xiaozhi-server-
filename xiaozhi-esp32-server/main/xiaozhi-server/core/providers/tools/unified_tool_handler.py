@@ -175,6 +175,9 @@ class UnifiedToolHandler:
                             ActionResponse(action=Action.ERROR, response="函数参数必须是对象")
                         )
                         break
+                    if await self._skip_eye_close_for_rest(conn, call["name"]):
+                        responses.append(ActionResponse(action=Action.NONE))
+                        break
                     result = await self.tool_manager.execute_tool(
                         call["name"], arguments
                     )
@@ -203,6 +206,9 @@ class UnifiedToolHandler:
 
             self.logger.debug(f"调用函数: {function_name}, 参数: {arguments}")
 
+            if await self._skip_eye_close_for_rest(conn, function_name):
+                return ActionResponse(action=Action.NONE)
+
             # 发送工具调用显示消息到设备
             try:
                 await send_display_message(self.conn, f"% {function_name}")
@@ -224,6 +230,14 @@ class UnifiedToolHandler:
         except Exception as e:
             self.logger.error(f"处理function call错误: {e}")
             return ActionResponse(action=Action.ERROR, response=str(e))
+
+    async def _skip_eye_close_for_rest(self, conn, function_name: str) -> bool:
+        """休息、睡觉、晚安不闭眼，只播确认语并结束会话。"""
+        if function_name != "self_eye_close" or not conn.should_keep_eyes_open_for_rest():
+            return False
+        self.logger.info("休息不闭眼，只结束会话")
+        await conn.close_for_rest()
+        return True
 
     async def _handle_successful_tool_call(
         self, conn, function_name: str, arguments: Dict[str, Any], result
