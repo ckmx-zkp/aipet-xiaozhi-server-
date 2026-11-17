@@ -4,6 +4,7 @@ from config.logger import setup_logging
 from core.api.ota_handler import OTAHandler
 from core.api.vision_handler import VisionHandler
 from core.api.model_validation_handler import ModelValidationHandler
+from core.social_test_control import control as social_test
 
 TAG = __name__
 
@@ -15,6 +16,7 @@ class SimpleHttpServer:
         self.ota_handler = OTAHandler(config)
         self.vision_handler = VisionHandler(config)
         self.model_validation_handler = ModelValidationHandler(config)
+        social_test.configure(config)
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -43,6 +45,10 @@ class SimpleHttpServer:
 
             if port:
                 app = web.Application()
+                app.router.add_post("/internal/social/test/start", social_test.start)
+                app.router.add_get("/internal/social/test/devices", social_test.devices)
+                app.router.add_get("/internal/social/test/{room_id}", social_test.status)
+                app.router.add_post("/internal/social/test/{room_id}/cancel", social_test.cancel)
                 app.router.add_post("/internal/models/validate", self.model_validation_handler.handle_post)
 
                 if not read_config_from_api:

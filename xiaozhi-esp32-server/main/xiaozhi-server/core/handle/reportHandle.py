@@ -119,6 +119,8 @@ def opus_to_wav(conn: "ConnectionHandler", pcm_data):
 
 
 def enqueue_tts_report(conn: "ConnectionHandler", text, opus_data):
+    if getattr(conn, "social_test_context", None):
+        return
     report_business_chat(conn, ROLE_ASSISTANT, text)
     if not conn.read_config_from_api or conn.need_bind or not conn.report_tts_enable:
         return
@@ -187,6 +189,8 @@ def enqueue_tool_report(conn: "ConnectionHandler", tool_name: str, tool_input: d
 
 
 def enqueue_asr_report(conn: "ConnectionHandler", text, opus_data):
+    if getattr(conn, "social_test_context", None):
+        return
     report_business_chat(conn, ROLE_USER, text)
     if not conn.read_config_from_api or conn.need_bind or not conn.report_asr_enable:
         return

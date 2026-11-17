@@ -61,6 +61,8 @@ async def handleHelloMessage(conn: "ConnectionHandler", msg_json):
             conn.client_aec = True
 
     await conn.websocket.send(json.dumps(conn.welcome_msg))
+    from core.social_test_control import control
+    control.register(conn)
 
 
 async def checkWakeupWords(conn: "ConnectionHandler", text):

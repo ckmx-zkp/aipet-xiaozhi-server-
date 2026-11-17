@@ -309,6 +309,10 @@ async def send_tts_message(conn: "ConnectionHandler", state, text=None):
         conn.clearSpeakStatus()
 
     # 发送消息到客户端
+    if state == "stop":
+        context = getattr(conn, "social_test_context", None)
+        if context and context.get("turn_id"):
+            context["tts_stop_sent"] = True
     await conn.websocket.send(json.dumps(message))
 
 

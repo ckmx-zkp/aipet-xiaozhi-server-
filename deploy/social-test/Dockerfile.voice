@@ -1,0 +1,3 @@
+FROM xiaozhi-aipet-server:v0.9.6-b18-spoken-vision
+COPY candidate/ /opt/xiaozhi-esp32-server/
+ENV SOCIAL_TEST_ENABLED=true SOCIAL_TEST_BACKEND=http://aipet-social-test-api:8000

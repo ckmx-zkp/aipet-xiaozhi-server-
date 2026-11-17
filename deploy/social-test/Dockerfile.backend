@@ -1,0 +1,4 @@
+FROM ai-pet-backend-release:9be6235b525d26946f337ffebab1bdad7042119c
+COPY backend/ /app/src/
+ENV PYTHONPATH=/app/src SOCIAL_TEST_ENABLED=true
+CMD ["uvicorn","web_api.social_test_app:app","--host","0.0.0.0","--port","8000","--workers","1"]

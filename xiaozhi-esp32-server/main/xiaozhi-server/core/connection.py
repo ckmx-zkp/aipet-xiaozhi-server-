@@ -488,6 +488,9 @@ class ConnectionHandler:
 
     async def _route_message(self, message):
         """消息路由"""
+        from core.social_test_control import control as social_test
+        if await social_test.route(self, message):
+            return
         # 检查是否已经获取到真实的绑定状态
         if not self.bind_completed_event.is_set():
             # 还没有获取到真实状态，等待直到获取到真实状态或超时
