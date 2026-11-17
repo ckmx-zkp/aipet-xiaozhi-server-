@@ -24,6 +24,53 @@ class ControlTests(unittest.IsolatedAsyncioTestCase):
         await control.route(conn, event)
         self.assertTrue(context["played"].is_set())
 
+    async def test_dual_turns_are_bound_to_real_connections(self):
+        import threading
+        sent, spoken, receipts = [], [], []
+        class Logger:
+            def bind(self, **kwargs): return self
+            def info(self, *args): pass
+        class PairControl(SocialTestControl):
+            async def send(self, conn, ctx, state, **extra):
+                sent.append((conn.device_id, state))
+                if state == "start": ctx["ready"].set()
+            async def speak(self, conn, ctx, turn):
+                spoken.append((conn.device_id, turn["turn_id"]))
+                ctx["played"].set()
+            async def backend(self, method, suffix="", payload=None):
+                receipts.append(payload)
+                index = len(receipts)
+                return make_room(index)
+        def make_room(index):
+            return {"room_id": "a"*32, "status": "finished" if index == 8 else "active",
+                "next_turn": None if index == 8 else {"turn_id": str(index+1),
+                    "speaker": "peer" if index % 2 == 0 else "real",
+                    "device_uid": "peer-device" if index % 2 == 0 else "real-device"}}
+        actors = {role: SimpleNamespace(device_id=role+"-device", stop_event=threading.Event(),
+            logger=Logger(), cancel_active_turn=lambda: None, social_test_context=True)
+            for role in ("peer", "real")}
+        contexts = {role: {"room_id": "a"*32, "ready": asyncio.Event(),
+            "played": asyncio.Event(), "turn_id": None, "tts_stop_sent": False}
+            for role in actors}
+        await PairControl().run_pair(actors, contexts, make_room(0))
+        self.assertEqual([uid for uid, _ in spoken], ["peer-device", "real-device"]*4)
+        self.assertTrue(all(item["result"] == "played" for item in receipts))
+        self.assertTrue(all(item["actor_device_uid"] == uid
+            for item, (uid, _) in zip(receipts, spoken)))
+        self.assertEqual(sum(state == "end" for _, state in sent), 2)
+        self.assertTrue(all(c.social_test_context is None for c in actors.values()))
+
+    async def test_tts_factory_waits_for_import_even_if_module_is_cached(self):
+        from unittest.mock import patch
+        with patch("config.logger.setup_logging", return_value=SimpleNamespace()):
+            from core.utils import tts
+        loaded = SimpleNamespace(TTSProvider=lambda: "ready")
+        with patch.object(tts.os.path, "exists", return_value=True), patch.object(
+                tts.importlib, "import_module", return_value=loaded) as importer:
+            with patch.dict("sys.modules", {"core.providers.tts.fake": SimpleNamespace()}):
+                self.assertEqual(tts.create_instance("fake"), "ready")
+                importer.assert_called_once_with("core.providers.tts.fake")
+
     async def test_normal_conversation_is_not_intercepted(self):
         self.assertFalse(await SocialTestControl().route(SimpleNamespace(), b"normal-packet"))
 

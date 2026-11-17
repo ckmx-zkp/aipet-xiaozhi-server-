@@ -1,0 +1,3 @@
+FROM aipet-social-test-api:20261117
+COPY backend/web_api/social_test.py /app/src/web_api/social_test.py
+COPY backend/web_api/routers/social_test.py /app/src/web_api/routers/social_test.py

@@ -22,3 +22,10 @@
 
 2026-11-17 四轮测试的房间 finished：四条模拟回执与四条实体播放回执齐全，用户确认音频完整。
 COM25 尚未烧录，后续真实双机内容与身份另行设计，不得把模拟回执改名为实体已播放。
+
+## 双实体机扩展（2026-11-17）
+
+- control_client.py 的 start-dual 使用 COM25 雾星与 COM7 两个已认证连接。双方 ready 后按四轮八段固定台词播放；每段只有对应 speaker/device_uid 的 played 可推进，不能使用 simulated。
+- Dockerfile.backend.dual / Dockerfile.voice.dual 从单机测试镜像增量构建；voice-dual-override.json 切到 social-dual-20261117。隔离 API 容器更新为 aipet-social-test-api:dual-20261117，无数据库迁移。
+- 双设备首次同时连接暴露 TTS 工厂直接读取 sys.modules 半初始化模块的竞态；改为总经 importlib.import_module 的导入锁，避免第二连接缺失 TTSProvider。四项语音候选测试包含此回归。
+- 本地 evidence/ 保存房间状态，仅作为未入 Git 的调试证据；两台连续日志位于固件仓 logs/COM7-live-20261117.log、COM25-live-20261117.log。

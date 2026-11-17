@@ -54,6 +54,11 @@ class SocialTestControl:
                 raise ValueError()
         except (ValueError, TypeError, KeyError):
             raise web.HTTPBadRequest(reason="explicit_consent_required")
+        peer_uid = body.get("peer_device_uid")
+        if peer_uid is not None:
+            if not isinstance(peer_uid, str) or peer_uid.lower().strip() == uid:
+                raise web.HTTPBadRequest(reason="different_peer_required")
+            return await self.start_pair(uid, peer_uid.lower().strip())
         conn = self.connections.get(uid)
         if (conn is None or not conn.tts or conn.need_bind or conn.stop_event.is_set()
                 or conn.client_is_speaking or getattr(conn, "social_test_context", None)
@@ -73,6 +78,123 @@ class SocialTestControl:
         except Exception:
             conn.social_test_context = None
             raise web.HTTPBadGateway(reason="backend_unavailable")
+
+    @staticmethod
+    def available(conn):
+        return (conn is not None and conn.tts and not conn.need_bind
+                and not conn.stop_event.is_set() and not conn.client_is_speaking
+                and not getattr(conn, "social_test_context", None)
+                and not getattr(conn, "close_after_chat", False))
+
+    async def start_pair(self, uid, peer_uid):
+        actors = {"real": self.connections.get(uid), "peer": self.connections.get(peer_uid)}
+        if not all(self.available(c) for c in actors.values()):
+            raise web.HTTPConflict(reason="both_devices_must_be_online_and_idle")
+        contexts = {}
+        for role, conn in actors.items():
+            ctx = {"room_id": None, "ready": asyncio.Event(), "played": asyncio.Event(),
+                   "turn_id": None, "task": None, "tts_stop_sent": False}
+            conn.social_test_context = ctx
+            contexts[role] = ctx
+        try:
+            room = await self.backend("POST", payload={"device_uid": uid,
+                "peer_device_uid": peer_uid, "consented": True})
+            for ctx in contexts.values():
+                ctx["room_id"] = room["room_id"]
+            task = asyncio.create_task(self.run_pair(actors, contexts, room))
+            for ctx in contexts.values():
+                ctx["task"] = task
+            self.running[room["room_id"]] = contexts["real"]
+            return web.json_response(room, status=202)
+        except Exception:
+            for conn in actors.values():
+                conn.social_test_context = None
+            raise web.HTTPBadGateway(reason="backend_unavailable")
+
+    @staticmethod
+    async def wait_event(event, actors, timeout):
+        deadline = time.monotonic() + timeout
+        while not event.is_set():
+            if any(c.stop_event.is_set() for c in actors.values()):
+                raise ConnectionError("peer_disconnected")
+            if time.monotonic() >= deadline:
+                raise asyncio.TimeoutError()
+            try:
+                await asyncio.wait_for(event.wait(), min(0.2, max(0.001, deadline-time.monotonic())))
+            except asyncio.TimeoutError:
+                pass
+
+    async def speak(self, conn, context, turn):
+        from core.providers.tts.dto.dto import ContentType, SentenceType, TTSMessageDTO
+        from core.handle.sendAudioHandle import send_tts_message
+        context["turn_id"] = turn["turn_id"]
+        context["played"].clear()
+        context["tts_stop_sent"] = False
+        await self.send(conn, context, "turn", turn_id=turn["turn_id"])
+        conn.sentence_id = uuid.uuid4().hex
+        conn.client_abort = False
+        conn.client_is_speaking = True
+        await send_tts_message(conn, "start")
+        conn.tts.store_tts_text(conn.sentence_id, turn["text"])
+        conn.tts.tts_text_queue.put(TTSMessageDTO(sentence_id=conn.sentence_id,
+            sentence_type=SentenceType.FIRST, content_type=ContentType.ACTION))
+        conn.tts.tts_one_sentence(conn, ContentType.TEXT, content_detail=turn["text"])
+        conn.tts.tts_text_queue.put(TTSMessageDTO(sentence_id=conn.sentence_id,
+            sentence_type=SentenceType.LAST, content_type=ContentType.ACTION))
+
+    async def run_pair(self, actors, contexts, room):
+        room_id = room["room_id"]
+        success = False
+        try:
+            for role, conn in actors.items():
+                conn.cancel_active_turn()
+                conn.client_abort = False
+                await self.send(conn, contexts[role], "start")
+            for ctx in contexts.values():
+                await self.wait_event(ctx["ready"], actors, 5)
+            while room["status"] == "active":
+                turn = room["next_turn"]
+                conn = actors[turn["speaker"]]
+                ctx = contexts[turn["speaker"]]
+                if turn["device_uid"] != conn.device_id:
+                    raise RuntimeError("actor_mapping_mismatch")
+                for actor in actors.values():
+                    actor.last_activity_time = time.time() * 1000
+                # 清除上一轮接受窗口；非发言方不能凭旧回执推进。
+                for item in contexts.values():
+                    item["turn_id"] = None
+                    item["tts_stop_sent"] = False
+                await self.speak(conn, ctx, turn)
+                await self.wait_event(ctx["played"], actors, 30)
+                room = await self.backend("POST", "/" + room_id + "/ack", {
+                    "turn_id": turn["turn_id"], "speaker": turn["speaker"],
+                    "result": "played", "actor_device_uid": conn.device_id})
+                await asyncio.sleep(0.5)
+            success = room["status"] == "finished"
+        except (Exception, asyncio.CancelledError):
+            try:
+                await self.backend("POST", "/" + room_id + "/cancel")
+            except Exception:
+                pass
+        finally:
+            self.running.pop(room_id, None)
+            for role, conn in actors.items():
+                conn.cancel_active_turn()
+                conn.sentence_id = uuid.uuid4().hex
+                conn.client_abort = True
+                try:
+                    await self.send(conn, contexts[role], "end")
+                except Exception:
+                    pass
+                conn.social_test_context = None
+                conn.client_abort = False
+                if not success:
+                    try:
+                        await conn.close()
+                    except Exception:
+                        pass
+            actors["real"].logger.bind(tag=__name__).info(
+                "SocialTest dual ended room={} completed={}", room_id, success)
 
     async def status(self, request):
         self.authorized(request)

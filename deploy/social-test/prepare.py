@@ -9,7 +9,7 @@ STAGE = Path(__file__).resolve().parent
 SOURCE = ROOT / "xiaozhi-esp32-server/main/xiaozhi-server"
 BASE = "74cf3fdfeb101c1d6025e8acd0352af928a0141c"
 FILES = ["core/http_server.py", "core/handle/helloHandle.py", "core/connection.py",
-         "core/handle/sendAudioHandle.py", "core/handle/reportHandle.py"]
+         "core/handle/sendAudioHandle.py", "core/handle/reportHandle.py", "core/utils/tts.py"]
 
 raw = subprocess.check_output([
     "ssh", "aliyun-aipet", "docker exec xiaozhi-esp32-server tar cf - " + " ".join(FILES)])
