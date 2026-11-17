@@ -16,6 +16,8 @@ class SocialTestControl:
         self.connections = WeakValueDictionary()
         self.running = {}
         self.config = {}
+        self.ble_invites = {}
+        self.used_ble_invites = {}
 
     def configure(self, config):
         self.config = config
@@ -227,6 +229,20 @@ class SocialTestControl:
             "room_id": context["room_id"], **extra}))
 
     async def route(self, conn, message):
+        if isinstance(message, str):
+            try:
+                incoming = json.loads(message)
+            except (ValueError, TypeError):
+                incoming = None
+            if (isinstance(incoming, dict) and incoming.get("type") == "social_test"
+                    and incoming.get("state") == "join"):
+                invite = incoming.get("invite_id", "")
+                allowed = {"d8:85:ac:bb:b0:80", "d8:85:ac:ba:85:d0"}
+                if (os.environ.get("SOCIAL_TEST_ENABLED") == "true"
+                        and conn.device_id in allowed and isinstance(invite, str)
+                        and len(invite) == 8 and all(c in "0123456789abcdef" for c in invite)):
+                    asyncio.create_task(self.join_ble(conn, invite))
+                return True
         context = getattr(conn, "social_test_context", None)
         if not context:
             return False
@@ -246,6 +262,38 @@ class SocialTestControl:
                 elif msg.get("type") == "abort" and context["task"]:
                     context["task"].cancel()
         return True
+
+    async def join_ble(self, conn, invite):
+        # 仅当前两台白名单测试设备；身份来自已经认证的连接。
+        now = time.monotonic()
+        self.ble_invites = {k: v for k, v in self.ble_invites.items()
+                            if now - v["created"] < 20}
+        self.used_ble_invites = {k: v for k, v in self.used_ble_invites.items() if now-v < 180}
+        if invite in self.used_ble_invites or len(self.ble_invites) >= 32:
+            return
+        pending = self.ble_invites.setdefault(invite, {"created": now, "actors": {}, "started": False})
+        pending["actors"][conn.device_id] = conn
+        try:
+            await asyncio.wait_for(conn.bind_completed_event.wait(), 10)
+            deadline = time.monotonic() + 10
+            while not conn.tts and time.monotonic() < deadline and not conn.stop_event.is_set():
+                await asyncio.sleep(0.1)
+            uid, peer = "d8:85:ac:bb:b0:80", "d8:85:ac:ba:85:d0"
+            actors = pending["actors"]
+            while (len(actors) == 2 and not all(self.available(c) for c in actors.values())
+                   and time.monotonic() - pending["created"] < 18 and not pending["started"]):
+                await asyncio.sleep(0.1)
+            if (not pending["started"] and uid in actors and peer in actors
+                    and time.monotonic() - pending["created"] < 20
+                    and all(self.available(c) for c in actors.values())):
+                pending["started"] = True
+                self.used_ble_invites[invite] = time.monotonic()
+                await self.start_pair(uid, peer)
+                self.ble_invites.pop(invite, None)
+                conn.logger.bind(tag=__name__).info("BLE social matched invite={}", invite)
+        except Exception as exc:
+            self.ble_invites.pop(invite, None)
+            conn.logger.bind(tag=__name__).warning("BLE social join failed kind={}", type(exc).__name__)
 
     async def run(self, conn, context, room):
         room_id = room["room_id"]

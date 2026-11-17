@@ -71,6 +71,41 @@ class ControlTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(tts.create_instance("fake"), "ready")
                 importer.assert_called_once_with("core.providers.tts.fake")
 
+    async def test_ble_two_authenticated_joins_match_once(self):
+        import threading
+        class Conn:
+            pass
+        class Logger:
+            def bind(self, **kwargs): return self
+            def info(self, *args): pass
+            def warning(self, *args): pass
+        class JoinControl(SocialTestControl):
+            def __init__(self): super().__init__(); self.matches = []
+            async def start_pair(self, uid, peer): self.matches.append((uid, peer))
+        control = JoinControl()
+        uids = ["d8:85:ac:bb:b0:80", "d8:85:ac:ba:85:d0"]
+        peers = []
+        for uid in uids:
+            c = Conn(); c.device_id=uid; c.tts=object(); c.need_bind=False
+            c.stop_event=threading.Event(); c.client_is_speaking=False
+            c.bind_completed_event=asyncio.Event(); c.bind_completed_event.set()
+            c.logger=Logger(); peers.append(c)
+        await control.join_ble(peers[0], "1234abcd")
+        self.assertEqual(control.matches, [])
+        await control.join_ble(peers[1], "1234abcd")
+        self.assertEqual(control.matches, [tuple(uids)])
+        await control.join_ble(peers[0], "1234abcd")
+        self.assertEqual(len(control.matches), 1)
+
+    async def test_ble_join_rejects_unknown_device(self):
+        from unittest.mock import patch
+        control = SocialTestControl()
+        with patch.dict("os.environ", {"SOCIAL_TEST_ENABLED": "true"}):
+            await control.route(SimpleNamespace(device_id="untrusted"),
+                '{"type":"social_test","state":"join","invite_id":"1234abcd"}')
+            await asyncio.sleep(0)
+        self.assertEqual(control.ble_invites, {})
+
     async def test_normal_conversation_is_not_intercepted(self):
         self.assertFalse(await SocialTestControl().route(SimpleNamespace(), b"normal-packet"))
 

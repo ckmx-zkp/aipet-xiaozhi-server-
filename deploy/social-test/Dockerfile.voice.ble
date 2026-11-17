@@ -1,0 +1,2 @@
+FROM xiaozhi-aipet-server:social-dual-20261117
+COPY candidate/core/social_test_control.py /opt/xiaozhi-esp32-server/core/social_test_control.py
